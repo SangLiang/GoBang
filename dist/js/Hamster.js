@@ -363,19 +363,19 @@ function EventListenerSystem(canvas) {
 		// 事件分发
 		for (var i = Hamster.uiList.length - 1; i >= 0; i--) {
 			if (Hamster.uiList[i]["isTrigger"] == true && position.x <= (Hamster.uiList[i].x + Hamster.uiList[i].width) && position.x >= Hamster.uiList[i].x && position.y >= Hamster.uiList[i].y && (position.y <= Hamster.uiList[i].y + Hamster.uiList[i].height)) {
-				Hamster.uiList[i].onClick();
+				Hamster.uiList[i].onClick(position);
 				return;
 			}
 		}
 		// sprite的分发
 		for (var i = Hamster.spriteList.length - 1; i >= 0; i--) {
 			if (Hamster.spriteList[i]["isTrigger"] == true && position.x <= (Hamster.spriteList[i].x + Hamster.spriteList[i].width) && position.x >= Hamster.spriteList[i].x && position.y >= Hamster.spriteList[i].y && (position.y <= Hamster.spriteList[i].y + Hamster.spriteList[i].height)) {
-				Hamster.spriteList[i].onClick();
+				Hamster.spriteList[i].onClick(position);
 				return;
 			}
 		}
-
-		console.log(position.x, position.y);
+		self.clickPos = position;
+		// console.log(position.x, position.y);
 	});
 }
 
@@ -394,6 +394,7 @@ EventListenerSystem.prototype.getClickEventPosition = function (ev) {
 	};
 }
 
+// 键盘事件的触发
 EventListenerSystem.prototype.keyEvent = function (callback, eventName) {
 	if (!window) {
 		console.log("window is undefined");
@@ -412,7 +413,6 @@ EventListenerSystem.prototype.keyEvent = function (callback, eventName) {
 			callback(e);
 		}, true);
 	}
-
 }
 
 Hamster.addEventListener = function (obj, eventName, callback) {

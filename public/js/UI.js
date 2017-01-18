@@ -14,3 +14,17 @@ module.exports.turnUI = Hamster.UI.Text({
 	"x": 230,
 	"y": 26
 });
+
+module.exports.blackPiece = Hamster.Sprite({
+	"name": "blackPiece",
+	"imageName": "black",
+	"x": 0,
+	"y": 0
+});
+
+module.exports.whitePiece = Hamster.Sprite({
+	"name": "whitePiece",
+	"imageName": "white",
+	"x": 0,
+	"y": 0
+});
