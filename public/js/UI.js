@@ -1,4 +1,5 @@
 // 背景
+
 module.exports.background = Hamster.Sprite({
 	"name": "background",
 	"imageName": "background",
@@ -15,16 +16,12 @@ module.exports.turnUI = Hamster.UI.Text({
 	"y": 26
 });
 
-module.exports.blackPiece = Hamster.Sprite({
-	"name": "blackPiece",
-	"imageName": "black",
-	"x": 0,
-	"y": 0
-});
+module.exports.changedSideText = function(turn) {
+	if (turn == 0) {
+		this.turnUI.setText("当前回合：黑棋");
+	}
 
-module.exports.whitePiece = Hamster.Sprite({
-	"name": "whitePiece",
-	"imageName": "white",
-	"x": 0,
-	"y": 0
-});
+	if (turn == 1) {
+		this.turnUI.setText("当前回合：白棋");
+	}
+}

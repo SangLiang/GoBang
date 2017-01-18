@@ -7,6 +7,7 @@
 
 var UI = require("./UI.js");
 var util = require("./util.js");
+var gameLogic = require('./gameLogic.js');
 
 var GameList = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -32,11 +33,17 @@ Hamster.init("main", 600, 600);
 UI.background.isTrigger = true;
 
 Hamster.addEventListener(UI.background, "click", function(e) {
-    console.log(e.x,e.y);
     var position = util.getBoardPosition(e.x, e.y);
-    UI.blackPiece.x = util.setPositionByBoardPosition(position.x, position.y).x;
-    UI.blackPiece.y = util.setPositionByBoardPosition(position.x, position.y).y;
-    Hamster.add(UI.blackPiece);
+    var _pos = util.setPositionByBoardPosition(position.x, position.y);
+
+    var piece = gameLogic.shotPiece(gameTurn, _pos);
+    Hamster.add(piece);
+    if (gameTurn == 0) {
+        gameTurn = 1;
+    } else {
+        gameTurn = 0;
+    }
+    UI.changedSideText(gameTurn);
 });
 
 Hamster.add(UI.background);
