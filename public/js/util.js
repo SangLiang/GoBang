@@ -14,7 +14,6 @@ module.exports = {
         }
 
         if ((y - OFFSET_Y) % OFFSET_PIECE > (OFFSET_PIECE / 2)) {
-            console.log(1);
             var resultY = parseInt((y - OFFSET_Y) / OFFSET_PIECE) + 1;
         } else {
             var resultY = parseInt((y - OFFSET_Y) / OFFSET_PIECE);
