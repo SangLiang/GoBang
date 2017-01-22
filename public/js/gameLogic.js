@@ -41,22 +41,34 @@ module.exports = {
             for (var y = 0; y < gameList[x].length; y++) {
                 // 横向检测条件
                 if (x <= 10 && gameList[x][y] != 0) {
-                    this.checkHorizontal(gameList, x, y);
+                    if (this.checkHorizontal(gameList, x, y) == true) {
+                        return true;
+                    }
                 }
                 // 纵向
                 if (y <= 10 && gameList[x][y] != 0) {
-                    this.checkVertica(gameList, x, y);
+                    if (this.checkVertica(gameList, x, y) == true) {
+                        return true;
+                    }
+                    // return this.checkVertica(gameList, x, y);
                 }
                 // 副对角线
                 if (x <= 10 && y <= 10 && gameList[x][y] != 0) {
-                    this.checkViceDiagonal(gameList, x, y);
+                    if (this.checkViceDiagonal(gameList, x, y) == true) {
+                        return true;
+                    }
+                    // return this.checkViceDiagonal(gameList, x, y);
                 }
                 // 主对角线
                 if (x <= 10 && y >= 4 && gameList[x][y] != 0) {
-                    this.checkMainDiagonal(gameList, x, y);
+                    if (this.checkMainDiagonal(gameList, x, y) == true) {
+                        return true;
+                    }
+                    // return this.checkMainDiagonal(gameList, x, y);
                 }
             }
         }
+        return false;
     },
 
     // 横排检测
