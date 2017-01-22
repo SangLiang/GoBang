@@ -39,7 +39,6 @@ Hamster.addEventListener(UI.background, "click", function(e) {
     if (!rightPlace) {
         return;
     }
-    console.log(gameList);
     //生成棋子 
     var piece = gameLogic.shotPiece(gameTurn, _pos);
     Hamster.add(piece);
