@@ -29,7 +29,8 @@ module.exports.start = function () {
     UI.background.isTrigger = true;
     Hamster.addEventListener(UI.background, "click", function (e) {
         console.log(result);
-        if(result){
+        // 判断游戏的结果
+        if (result) {
             return;
         }
 

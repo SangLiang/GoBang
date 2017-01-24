@@ -50,21 +50,18 @@ module.exports = {
                     if (this.checkVertica(gameList, x, y) == true) {
                         return true;
                     }
-                    // return this.checkVertica(gameList, x, y);
                 }
                 // 副对角线
                 if (x <= 10 && y <= 10 && gameList[x][y] != 0) {
                     if (this.checkViceDiagonal(gameList, x, y) == true) {
                         return true;
                     }
-                    // return this.checkViceDiagonal(gameList, x, y);
                 }
                 // 主对角线
                 if (x <= 10 && y >= 4 && gameList[x][y] != 0) {
                     if (this.checkMainDiagonal(gameList, x, y) == true) {
                         return true;
                     }
-                    // return this.checkMainDiagonal(gameList, x, y);
                 }
             }
         }

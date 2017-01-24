@@ -23,4 +23,12 @@ var gameList = [
 
 var gameTurn = 0; // 0代表黑子，1代表白子
 
+module.exports.start = function () {
+    gameTurn = util.getRandomNumber(0, 1);
+    UI.changedSideText(gameTurn);
 
+
+    Hamster.add(UI.background);
+    Hamster.add(UI.turnUI);
+    console.log(gameTurn);
+}

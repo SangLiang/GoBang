@@ -6,7 +6,7 @@ var OFFSET_PIECE = 35; // 棋子的偏移量
 
 module.exports = {
     // 获取矩阵位置
-    "getBoardPosition": function(x, y) {
+    "getBoardPosition": function (x, y) {
         if ((x - OFFSET_X) % OFFSET_PIECE > (OFFSET_PIECE / 2)) {
             var resultX = parseInt((x - OFFSET_X) / OFFSET_PIECE) + 1;
         } else {
@@ -27,7 +27,7 @@ module.exports = {
     },
 
     // 
-    "setPositionByBoardPosition": function(x, y) {
+    "setPositionByBoardPosition": function (x, y) {
         var resultX = x * OFFSET_PIECE + OFFSET_X - OFFSET_PIECE / 2;
         var resultY = y * OFFSET_PIECE + OFFSET_Y - OFFSET_PIECE / 2;
         var obj = {
@@ -35,6 +35,12 @@ module.exports = {
             "y": resultY
         };
         return obj;
+    },
+    // 取随机数
+    "getRandomNumber": function (Min, Max) {
+        var Range = Max - Min;
+        var Rand = Math.random();
+        return (Min + Math.round(Rand * Range));
     }
 
 }
