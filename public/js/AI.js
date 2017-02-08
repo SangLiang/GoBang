@@ -18,7 +18,7 @@ AI.prototype = {
         for (var i = 0; i < gameList.length; i++) {
             for (var j = 0; j < gameList[i].length; j++) {
                 // 横向检测条件
-                if (x <= 10 && gameList[i][j] != 0) {
+                if (x < 14 && gameList[i][j] != 0) {
                     this.checkHorizontal(gameList, i, j);
                 }
             }
@@ -45,8 +45,8 @@ AI.prototype = {
     "checkMainDiagonal": function () {
 
     },
-    "shotPiece": function () {
-        console.log(1);
+    "shotPiece": function (x, y) {
+        console.log("I shot the Piece");
     }
 }
 

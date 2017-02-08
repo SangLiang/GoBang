@@ -30,10 +30,22 @@ module.exports.start = function () {
     gameTurn = util.getRandomNumber(0, 1);
     UI.changedSideText(gameTurn);
 
-    if (gameTurn == 0){
+    if (gameTurn == 0){  
+        // 电脑先手
         ai.shotPiece();
-    }
+    }else{
+        // 玩家先手
 
+    }
+    Hamster.addEventListener(UI.background,"click",function(){
+        if(gameTurn == 0){
+            return;
+        }
+
+        console.log(1);
+
+        gameTurn = 0;
+    });
 
     Hamster.add(UI.background);
     Hamster.add(UI.turnUI);
