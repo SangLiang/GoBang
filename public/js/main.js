@@ -30,4 +30,3 @@ Hamster.addEventListener(null,"keyDown",function(e){
         double.start();
     }
 });
-// double.start();

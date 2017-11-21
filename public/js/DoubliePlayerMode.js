@@ -1,4 +1,6 @@
-// 双人模式逻辑
+/*
+ * 双人模式逻辑
+ */ 
 var UI = require("./UI.js");
 var util = require("./util.js");
 var gameLogic = require('./gameLogic.js');
@@ -28,7 +30,6 @@ module.exports.start = function () {
     UI.changedSideText(gameTurn);
     UI.background.isTrigger = true;
     Hamster.addEventListener(UI.background, "click", function (e) {
-        console.log(result);
         // 判断游戏的结果
         if (result) {
             return;
@@ -42,6 +43,8 @@ module.exports.start = function () {
         }
         //生成棋子 
         var piece = gameLogic.shotPiece(gameTurn, _pos);
+        console.log(_pos);
+        console.log(position);
         Hamster.add(piece);
         result = gameLogic.getResult(gameList, position.x, position.y);
         if (gameTurn == 0) {

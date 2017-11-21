@@ -5,7 +5,12 @@ var OFFSET_Y = 55;
 var OFFSET_PIECE = 35; // 棋子的偏移量
 
 module.exports = {
-    // 获取矩阵位置
+    /*
+     * getBoardPosition :转换坐标为格子位置
+     * @param x: x坐标
+     * @param y: y坐标
+     * @return obj 转换后的格子坐标
+     */
     "getBoardPosition": function (x, y) {
         if ((x - OFFSET_X) % OFFSET_PIECE > (OFFSET_PIECE / 2)) {
             var resultX = parseInt((x - OFFSET_X) / OFFSET_PIECE) + 1;
@@ -36,11 +41,30 @@ module.exports = {
         };
         return obj;
     },
-    // 取随机数
+
+    /* getRandomNumber:取随机数
+     * @param Min 最小值
+     * @param Max 最大值
+     * @return 介于最小最大值之间的随机值
+     */
     "getRandomNumber": function (Min, Max) {
         var Range = Max - Min;
         var Rand = Math.random();
         return (Min + Math.round(Rand * Range));
+    },
+
+    "AIDelayShot":function(delayTime,callback,target){
+
+        if(target!=null){
+            setTimeout(function(){
+                callback.bind(target)();
+            },delayTime);
+        }else {
+            setTimeout(function(){
+                callback();
+            },delayTime);
+        }   
+       
     }
 
 }
