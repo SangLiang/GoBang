@@ -1,4 +1,10 @@
-// 游戏逻辑
+/*
+ * 游戏核心逻辑
+ */
+
+// 权重临时数组
+var weight_list = [];
+
 module.exports = {
     // 放棋子
     "shotPiece": function (side, position) {
@@ -35,6 +41,7 @@ module.exports = {
         }
     },
 
+    // 获取游戏结果
     "getResult": function (gameList, x, y) {
 
         for (var x = 0; x < gameList.length; x++) {
@@ -104,5 +111,64 @@ module.exports = {
         } else {
             return false;
         }
+    },
+
+    // 获取权重点
+    "getTheGameWeight":function(gameList,x,y){
+        // if(){
+
+        // }
+
+        // 获取x轴上面的权重
+        weight_list = [];
+        var verticaWeight  = this.getHorizontalWeightToRight(gameList,x,y);
+        console.log(weight_list);
+        // if(){
+
+        // }
+
+
+    },
+
+    // 纵向权重
+    "getVerticaWeight":function(gameList,x,y){
+        var _p = gameList[x][y];
+
+    },
+    // 横向右边权重
+    "getHorizontalWeightToRight":function(gameList,x,y){
+        var _p = gameList[x][y];
+
+        if(x<=10){
+            if(_p == gameList[x+1][y] || gameList[x+1][y] == 0){
+
+                if(gameList[x+2][y] == 0 ||gameList[x+1][y] == 0){
+                    var point = {
+                        x:x,
+                        y:y
+                    }
+                    weight_list.push(point);
+                }else {
+                    var point = {
+                        x:x,
+                        y:y
+                    }
+                    weight_list.push(point);
+                    this.getHorizontalWeightToRight(gameList,x+1,y);
+                }
+                
+
+            }else {
+                var point = {
+                    x :x,
+                    y:y
+                }
+
+                weight_list.push(point);
+                return;
+            }
+        }
     }
+
+
 }
