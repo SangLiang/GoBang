@@ -5,6 +5,9 @@
 // 权重临时数组
 var weight_list = [];
 
+// 需要计算权重的数组
+window.needComputePlace = [];
+
 module.exports = {
     // 放棋子
     "shotPiece": function (side, position) {
@@ -122,12 +125,9 @@ module.exports = {
         // 获取x轴上面的权重
         weight_list = [];
         var verticaWeight  = this.getHorizontalWeightToRight(gameList,x,y);
-        console.log(weight_list);
-        // if(){
+        // console.log(weight_list);
 
-        // }
-
-
+        return weight_list.length;
     },
 
     // 纵向权重
@@ -140,32 +140,81 @@ module.exports = {
         var _p = gameList[x][y];
 
         if(x<=10){
-            if(_p == gameList[x+1][y] || gameList[x+1][y] == 0){
-
-                if(gameList[x+2][y] == 0 ||gameList[x+1][y] == 0){
-                    var point = {
-                        x:x,
-                        y:y
-                    }
-                    weight_list.push(point);
-                }else {
-                    var point = {
-                        x:x,
-                        y:y
-                    }
-                    weight_list.push(point);
-                    this.getHorizontalWeightToRight(gameList,x+1,y);
+            // 右侧相等 或者为空
+            if(_p == gameList[x+1][y]){
+                var point = {
+                    x:x,
+                    y:y
                 }
-                
-
-            }else {
+                weight_list.push(point);
+                this.getHorizontalWeightToRight(gameList,x+1,y);
+            }else if(_p !=gameList[x+1][y] && gameList[x+1][y]!=0){
                 var point = {
                     x :x,
                     y:y
                 }
-
                 weight_list.push(point);
                 return;
+            }
+        }
+    },
+
+    "getHorizontalWeightToRight":function(){
+        
+    },
+
+    // 检测威胁点
+    "checkDanger":function(){
+        needComputePlace = [];
+        
+        for(var i = 0; i<gameList.length; i++){
+            for(var k =0; k <gameList[i].length; k++){
+                if(gameList[i][k] == 0){
+
+                    if(i<14 && gameList[i+1][k] ){
+                        if(gameList[i+1][k]!=0){
+                            (function(a,b){
+                                var _t = {};
+                                _t.x = a;
+                                _t.y = b;
+                                needComputePlace.push(_t);
+                            })(i,k)
+                        }
+                    }
+
+                    if (i>0 && gameList[i-1][k]){
+                        if(gameList[i-1][k]!=0){
+                            (function(a,b){
+                                var _t = {};
+                                _t.x = a;
+                                _t.y = b;
+                                needComputePlace.push(_t);
+                            })(i,k)
+                        }
+                    }
+
+                    if(k<14 && gameList[i][k+1]){
+                        if(gameList[i][k+1]!=0){
+                           (function(a,b){
+                                var _t = {};
+                                _t.x = a;
+                                _t.y = b;
+                                needComputePlace.push(_t);
+                            })(i,k)
+                        }
+                    }
+
+                    if(k>0 && gameList[i][k-1]){
+                        if(gameList[i][k-1]!=0){
+                            (function(a,b){
+                                var _t = {};
+                                _t.x = a;
+                                _t.y = b;
+                                needComputePlace.push(_t);
+                            })(i,k)
+                        }
+                    }
+                }
             }
         }
     }
