@@ -74,7 +74,6 @@ AI.prototype = {
             }
         }
 
-        console.log("AI 放子了");
         if(userLastPieceLocation!=null){
             var weight = gameLogic.getTheGameWeight(gameList,userLastPieceLocation.x,userLastPieceLocation.y);
         }
@@ -86,15 +85,16 @@ AI.prototype = {
         console.log("AI gameTurn:"+ gameTurn);
         var piece = gameLogic.shotPiece(gameTurn, _pos);
 
-        if(gameTurn == 0){
-            gameTurn =1;
-        }else if(gameTurn ==1){
-            gameTurn = 0;
+        if(window.gameTurn == 0){
+            window.gameTurn =1;
+        }else if(window.gameTurn ==1){
+            window.gameTurn = 0;
         }
 
         console.error(gameTurn);
         util.AIDelayShot(500,function(){
             Hamster.add(piece);
+            window.isUserTurn = true;
         });
     }
 }

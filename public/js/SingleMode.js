@@ -48,20 +48,12 @@ module.exports.start = function () {
         gameTurn == 0;
         isUserTurn = true;
     }
-    Hamster.addEventListener(UI.background,"click",function(){
-        if(gameTurn == 0){
-            return;
-        }
-
-        console.log(1);
-
     UI.background.isTrigger = true;
-
     Hamster.addEventListener(UI.background, "click", function (e) {
         console.warn(gameTurn);
 
         // 判断游戏的结果
-        if (result && !isUserTurn) {
+        if (result && !window.gameTurn) {
             return;
         }
 
@@ -82,15 +74,15 @@ module.exports.start = function () {
         result = gameLogic.getResult(gameList, position.x, position.y);
         
         //  转换回合
-        if(gameTurn == 0){
-            gameTurn =1;
-        }else if(gameTurn ==1){
-            gameTurn = 0;
+        if(window.gameTurn == 0){
+            window.gameTurn =1;
+        }else if(window.gameTurn ==1){
+            window.gameTurn = 0;
         }
 
         UI.changedSideText(gameTurn);
 
-        isUserTurn = false;
+        window.isUserTurn = false;
 
         ai.shotPiece(gameTurn,gameList);
     });
