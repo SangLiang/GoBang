@@ -53,18 +53,28 @@ module.exports = {
         return (Min + Math.round(Rand * Range));
     },
 
-    "AIDelayShot":function(delayTime,callback,target){
+    "AIDelayShot": function (delayTime, callback, target) {
 
-        if(target!=null){
-            setTimeout(function(){
+        if (target != null) {
+            setTimeout(function () {
                 callback.bind(target)();
-            },delayTime);
-        }else {
-            setTimeout(function(){
+            }, delayTime);
+        } else {
+            setTimeout(function () {
                 callback();
-            },delayTime);
-        }   
-       
+            }, delayTime);
+        }
+
+    },
+    
+    "getMostDangerPlace": function (objlist) {
+        var _big = objlist[0];
+        for (var i = 0; i < objlist.length; i++) {
+            if (objlist[i].weight > _big.weight) {
+                _big = objlist[i];
+            }
+        }
+        return _big;
     }
 
 }

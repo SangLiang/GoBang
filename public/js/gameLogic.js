@@ -117,15 +117,22 @@ module.exports = {
     },
 
     // 获取权重点
-    "getTheGameWeight": function (gameList, x, y) {
-        // console.log(gameList);
-        console.log(x, y);
+    "getTheGameWeight": function (gameList, x, y, turn) {
+        var _temp = [];
+        weight_list = [];
 
         // 获取x轴上面的权重
-        var horizontalRightWeight = this.getHorizontalWeightToRight(gameList, x, y);
-        // var horizontalLeftWeight = 
+        var horizontalRightWeight = this.getHorizontalWeightToRight(gameList, x, y, turn);
+        var horizontalLeftWeight = this.getHorizontalWeightToLeft(gameList, x, y, turn);
+
+        var verticalTopWeight = this.getHorizontalWeightToTop(gameList, x, y, turn);
+        var verticalBottomWeight = this.getHorizontalWeightToBottom(gameList, x, y, turn);
         // console.log(weight_list);
 
+        // console.log(weight_list);
+        // console.log(weight_list.length);
+        // console.log();
+        _temp = _temp.concat(horizontalLeftWeight).concat(horizontalLeftWeight);
         return weight_list;
     },
 
@@ -135,10 +142,9 @@ module.exports = {
 
     },
     // 横向右边权重
-    "getHorizontalWeightToRight": function (gameList, x, y) {
-        weight_list = [];
-        var _p = gameList[x][y];
-        // console.log(_p);
+    "getHorizontalWeightToRight": function (gameList, x, y, turn) {
+        // var _p = gameList[x][y];
+        var _p = turn;
         if (x <= 10) {
             // 右侧相等 或者为空
             if (_p == gameList[x + 1][y]) {
@@ -147,22 +153,16 @@ module.exports = {
                     y: y
                 }
                 weight_list.push(point);
-                this.getHorizontalWeightToRight(gameList, x + 1, y);
+                this.getHorizontalWeightToRight(gameList, x + 1, y, turn);
             } else if (_p != gameList[x + 1][y] && gameList[x + 1][y] != 0) {
-                var point = {
-                    x: x,
-                    y: y
-                }
-                weight_list.push(point);
-                return;
+              
             }
         }
     },
     // 横向左方向检测
-    "getHorizontalWeightToLeft": function () {
-        weight_list = [];
-        var _p = gameList[x][y];
-        // console.log(_p);
+    "getHorizontalWeightToLeft": function (gameList, x, y, turn) {
+        // var _p = gameList[x][y];
+        var _p = turn;
         if (x > 0) {
             // 右侧相等 或者为空
             if (_p == gameList[x - 1][y]) {
@@ -171,21 +171,54 @@ module.exports = {
                     y: y
                 }
                 weight_list.push(point);
-                this.getHorizontalWeightToRight(gameList, x - 1, y);
+                this.getHorizontalWeightToLeft(gameList, x - 1, y, turn);
             } else if (_p != gameList[x - 1][y] && gameList[x - 1][y] != 0) {
+
+            }
+        }
+    },
+
+    // 纵向上方向检测
+    "getHorizontalWeightToTop": function (gameList, x, y, turn) {
+        // var _p = gameList[x][y];
+        var _p = turn;
+        if (y > 0) {
+            // 右侧相等 或者为空
+            if (_p == gameList[x][y - 1]) {
                 var point = {
                     x: x,
                     y: y
                 }
                 weight_list.push(point);
-                return;
+                this.getHorizontalWeightToTop(gameList, x, y - 1, turn);
+            } else if (_p != gameList[x][y - 1] && gameList[x][y - 1] != 0) {
+
+            }
+        }
+    },
+
+    // 纵向下方向检测
+    "getHorizontalWeightToBottom": function (gameList, x, y, turn) {
+        // var _p = gameList[x][y];
+        var _p = turn;
+        if (y < 14) {
+            // 右侧相等 或者为空
+            if (_p == gameList[x][y + 1]) {
+                var point = {
+                    x: x,
+                    y: y
+                }
+                weight_list.push(point);
+                this.getHorizontalWeightToBottom(gameList, x, y + 1, turn);
+            } else if (_p != gameList[x][y - 1] && gameList[x][y + 1] != 0) {
+
             }
         }
     },
 
     // 检测威胁点
     "checkDanger": function () {
-        needComputePlace = [];
+        window.needComputePlace = [];
         for (var i = 0; i < gameList.length; i++) {
             for (var k = 0; k < gameList[i].length; k++) {
                 if (gameList[i][k] == 0) {
@@ -196,7 +229,7 @@ module.exports = {
                                 var _t = {};
                                 _t.x = a;
                                 _t.y = b;
-                                needComputePlace.push(_t);
+                                window.needComputePlace.push(_t);
                             })(i, k)
                         }
                     }
@@ -207,7 +240,7 @@ module.exports = {
                                 var _t = {};
                                 _t.x = a;
                                 _t.y = b;
-                                needComputePlace.push(_t);
+                                window.needComputePlace.push(_t);
                             })(i, k)
                         }
                     }
@@ -218,7 +251,7 @@ module.exports = {
                                 var _t = {};
                                 _t.x = a;
                                 _t.y = b;
-                                needComputePlace.push(_t);
+                                window.needComputePlace.push(_t);
                             })(i, k)
                         }
                     }
@@ -229,7 +262,7 @@ module.exports = {
                                 var _t = {};
                                 _t.x = a;
                                 _t.y = b;
-                                needComputePlace.push(_t);
+                                window.needComputePlace.push(_t);
                             })(i, k)
                         }
                     }
