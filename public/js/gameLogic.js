@@ -117,41 +117,65 @@ module.exports = {
     },
 
     // 获取权重点
-    "getTheGameWeight":function(gameList,x,y){
-        // if(){
-
-        // }
+    "getTheGameWeight": function (gameList, x, y) {
+        // console.log(gameList);
+        console.log(x, y);
 
         // 获取x轴上面的权重
-        weight_list = [];
-        var verticaWeight  = this.getHorizontalWeightToRight(gameList,x,y);
+        var horizontalRightWeight = this.getHorizontalWeightToRight(gameList, x, y);
+        // var horizontalLeftWeight = 
         // console.log(weight_list);
 
-        return weight_list.length;
+        return weight_list;
     },
 
     // 纵向权重
-    "getVerticaWeight":function(gameList,x,y){
+    "getVerticaWeight": function (gameList, x, y) {
         var _p = gameList[x][y];
 
     },
     // 横向右边权重
-    "getHorizontalWeightToRight":function(gameList,x,y){
+    "getHorizontalWeightToRight": function (gameList, x, y) {
+        weight_list = [];
         var _p = gameList[x][y];
-
-        if(x<=10){
+        // console.log(_p);
+        if (x <= 10) {
             // 右侧相等 或者为空
-            if(_p == gameList[x+1][y]){
+            if (_p == gameList[x + 1][y]) {
                 var point = {
-                    x:x,
-                    y:y
+                    x: x,
+                    y: y
                 }
                 weight_list.push(point);
-                this.getHorizontalWeightToRight(gameList,x+1,y);
-            }else if(_p !=gameList[x+1][y] && gameList[x+1][y]!=0){
+                this.getHorizontalWeightToRight(gameList, x + 1, y);
+            } else if (_p != gameList[x + 1][y] && gameList[x + 1][y] != 0) {
                 var point = {
-                    x :x,
-                    y:y
+                    x: x,
+                    y: y
+                }
+                weight_list.push(point);
+                return;
+            }
+        }
+    },
+    // 横向左方向检测
+    "getHorizontalWeightToLeft": function () {
+        weight_list = [];
+        var _p = gameList[x][y];
+        // console.log(_p);
+        if (x > 0) {
+            // 右侧相等 或者为空
+            if (_p == gameList[x - 1][y]) {
+                var point = {
+                    x: x,
+                    y: y
+                }
+                weight_list.push(point);
+                this.getHorizontalWeightToRight(gameList, x - 1, y);
+            } else if (_p != gameList[x - 1][y] && gameList[x - 1][y] != 0) {
+                var point = {
+                    x: x,
+                    y: y
                 }
                 weight_list.push(point);
                 return;
@@ -159,64 +183,62 @@ module.exports = {
         }
     },
 
-    "getHorizontalWeightToRight":function(){
-        
-    },
-
     // 检测威胁点
-    "checkDanger":function(){
+    "checkDanger": function () {
         needComputePlace = [];
-        
-        for(var i = 0; i<gameList.length; i++){
-            for(var k =0; k <gameList[i].length; k++){
-                if(gameList[i][k] == 0){
+        for (var i = 0; i < gameList.length; i++) {
+            for (var k = 0; k < gameList[i].length; k++) {
+                if (gameList[i][k] == 0) {
 
-                    if(i<14 && gameList[i+1][k] ){
-                        if(gameList[i+1][k]!=0){
-                            (function(a,b){
+                    if (i < 14 && gameList[i + 1][k]) {
+                        if (gameList[i + 1][k] != 0) {
+                            (function (a, b) {
                                 var _t = {};
                                 _t.x = a;
                                 _t.y = b;
                                 needComputePlace.push(_t);
-                            })(i,k)
+                            })(i, k)
                         }
                     }
 
-                    if (i>0 && gameList[i-1][k]){
-                        if(gameList[i-1][k]!=0){
-                            (function(a,b){
+                    if (i > 0 && gameList[i - 1][k]) {
+                        if (gameList[i - 1][k] != 0) {
+                            (function (a, b) {
                                 var _t = {};
                                 _t.x = a;
                                 _t.y = b;
                                 needComputePlace.push(_t);
-                            })(i,k)
+                            })(i, k)
                         }
                     }
 
-                    if(k<14 && gameList[i][k+1]){
-                        if(gameList[i][k+1]!=0){
-                           (function(a,b){
+                    if (k < 14 && gameList[i][k + 1]) {
+                        if (gameList[i][k + 1] != 0) {
+                            (function (a, b) {
                                 var _t = {};
                                 _t.x = a;
                                 _t.y = b;
                                 needComputePlace.push(_t);
-                            })(i,k)
+                            })(i, k)
                         }
                     }
 
-                    if(k>0 && gameList[i][k-1]){
-                        if(gameList[i][k-1]!=0){
-                            (function(a,b){
+                    if (k > 0 && gameList[i][k - 1]) {
+                        if (gameList[i][k - 1] != 0) {
+                            (function (a, b) {
                                 var _t = {};
                                 _t.x = a;
                                 _t.y = b;
                                 needComputePlace.push(_t);
-                            })(i,k)
+                            })(i, k)
                         }
                     }
                 }
             }
         }
+
+
+
     }
 
 

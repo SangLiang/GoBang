@@ -27,7 +27,6 @@ AI.prototype = {
                     this.checkHorizontal(gameList, i, j);
                 }
             }
-
         }
     },
     // 横排检测
@@ -51,48 +50,49 @@ AI.prototype = {
     "checkMainDiagonal": function () {
 
     },
-    
+
     /*
      * AI放棋子
      * @param gameTurn 游戏的先后手
      */
 
-    "shotPiece": function (gameTurn,gameList) {
+    "shotPiece": function (gameTurn, gameList) {
         gameLogic.checkDanger();
-        // console.log(needComputePlace);
         var position = {};
 
-        if(needComputePlace.length >0){
+        if (needComputePlace.length > 0) {
+            var _i = util.getRandomNumber(0, needComputePlace.length - 1);
+            // console.log(_i);
             position = {
-                x:needComputePlace[0].x,
-                y:needComputePlace[0].y
+                x: needComputePlace[_i].x,
+                y: needComputePlace[_i].y
             }
-        }else {
+        } else {
             position = {
                 x: 7,
                 y: 7
             }
         }
 
-        if(userLastPieceLocation!=null){
-            var weight = gameLogic.getTheGameWeight(gameList,userLastPieceLocation.x,userLastPieceLocation.y);
+        if (window.userLastPieceLocation != null) {
+            var weight = gameLogic.getTheGameWeight(gameList, window.userLastPieceLocation.x, window.userLastPieceLocation.y);
+            console.log(weight);
         }
 
         var _pos = util.setPositionByBoardPosition(position.x, position.y);
         var rightPlace = gameLogic.setPieceInGameList(gameTurn, gameList, position);
 
-        if(!rightPlace)return;
-        console.log("AI gameTurn:"+ gameTurn);
+        if (!rightPlace) return;
         var piece = gameLogic.shotPiece(gameTurn, _pos);
 
-        if(window.gameTurn == 0){
-            window.gameTurn =1;
-        }else if(window.gameTurn ==1){
+        // 切换回合
+        if (window.gameTurn == 0) {
+            window.gameTurn = 1;
+        } else if (window.gameTurn == 1) {
             window.gameTurn = 0;
         }
 
-        console.error(gameTurn);
-        util.AIDelayShot(500,function(){
+        util.AIDelayShot(500, function () {
             Hamster.add(piece);
             window.isUserTurn = true;
         });

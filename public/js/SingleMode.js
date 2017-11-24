@@ -25,7 +25,7 @@ window.gameList = [
 window.gameTurn = null; // 0代表黑子，1代表白子
 window.isUserTurn = false;
 window.userLastPieceLocation = null;
-var result = false;
+window.result = false;
 
 module.exports.start = function () {
     Hamster.add(UI.background);
@@ -34,49 +34,52 @@ module.exports.start = function () {
     var ai = new AI();
 
     // 设置电脑的先后手
-    var random = util.getRandomNumber(0,1);
+    var random = util.getRandomNumber(0, 1);
 
-    random = 0;
+    random = 1;
     UI.changedSideText(gameTurn);
-    if(random == 0){
-        gameTurn = 0;
-         //电脑先放子
-        ai.shotPiece(gameTurn,gameList);
+    if (random == 0) {
+        window.gameTurn = 0;
+        //电脑先放子
+        ai.shotPiece(gameTurn, gameList);
         isUserTurn = false;
-    }else {
+    } else {
         // 玩家先放子
-        gameTurn == 0;
-        isUserTurn = true;
+        window.gameTurn = 0;
+        window.isUserTurn = true;
     }
+
     UI.background.isTrigger = true;
     Hamster.addEventListener(UI.background, "click", function (e) {
-        console.warn(gameTurn);
 
         // 判断游戏的结果
-        if (result && !window.gameTurn) {
+        if (!window.isUserTurn) {
             return;
         }
 
+        if (window.result) {
+            console.log("game over");
+            return;
+        }
         var position = util.getBoardPosition(e.x, e.y);
         var _pos = util.setPositionByBoardPosition(position.x, position.y);
-        userLastPieceLocation = position;
-        // console.log("玩家放子区域 ----------------");
-        // console.log(userLastPieceLocation);
+        window.userLastPieceLocation = position;
+
         var rightPlace = gameLogic.setPieceInGameList(gameTurn, gameList, position);
         if (!rightPlace) {
             return;
         }
 
         //生成棋子 
-        console.log("玩家放的棋子颜色"+gameTurn);
+        // console.log("玩家放的棋子颜色"+gameTurn);
         var piece = gameLogic.shotPiece(gameTurn, _pos);
         Hamster.add(piece);
-        result = gameLogic.getResult(gameList, position.x, position.y);
-        
+        window.result = gameLogic.getResult(gameList, position.x, position.y);
+        // console.log(window.result);
         //  转换回合
-        if(window.gameTurn == 0){
-            window.gameTurn =1;
-        }else if(window.gameTurn ==1){
+        if (window.gameTurn == 0) {
+            window.gameTurn = 1;
+        } else if (window.gameTurn == 1) {
             window.gameTurn = 0;
         }
 
@@ -84,7 +87,7 @@ module.exports.start = function () {
 
         window.isUserTurn = false;
 
-        ai.shotPiece(gameTurn,gameList);
+        ai.shotPiece(gameTurn, gameList);
     });
 
 }

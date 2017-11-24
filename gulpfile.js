@@ -9,7 +9,7 @@ gulp.task('webserver', function () {
 	return gulp.src('./')
 		.pipe(webserver({
 			port:5000,
-			livereload: true,
+			livereload: false,
 			directoryListing: true,
 			open: 'http://127.0.0.1:5000/index.html',
 		}));
