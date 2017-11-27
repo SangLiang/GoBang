@@ -71,11 +71,10 @@ module.exports.start = function () {
         }
 
         //生成棋子 
-        // console.log("玩家放的棋子颜色"+gameTurn);
         var piece = gameLogic.shotPiece(gameTurn, _pos);
         Hamster.add(piece);
         window.result = gameLogic.getResult(gameList, position.x, position.y);
-        // console.log(window.result);
+
         //  转换回合
         if (window.gameTurn == 0) {
             window.gameTurn = 1;

@@ -127,11 +127,13 @@ module.exports = {
 
         var verticalTopWeight = this.getHorizontalWeightToTop(gameList, x, y, turn);
         var verticalBottomWeight = this.getHorizontalWeightToBottom(gameList, x, y, turn);
-        // console.log(weight_list);
 
-        // console.log(weight_list);
-        // console.log(weight_list.length);
-        // console.log();
+        var leftTopWeight = this.getLeftTopWeight(gameList, x, y, turn);
+        var getRightTopWeight = this.getRightTopWeight(gameList, x, y, turn);
+
+        var leftBottomWeight = this.getLeftBottomWeight(gameList, x, y, turn);
+        var rightBottomWeight = this.getRightBottomWeight(gameList, x, y, turn);
+      
         _temp = _temp.concat(horizontalLeftWeight).concat(horizontalLeftWeight);
         return weight_list;
     },
@@ -155,7 +157,7 @@ module.exports = {
                 weight_list.push(point);
                 this.getHorizontalWeightToRight(gameList, x + 1, y, turn);
             } else if (_p != gameList[x + 1][y] && gameList[x + 1][y] != 0) {
-              
+
             }
         }
     },
@@ -199,7 +201,6 @@ module.exports = {
 
     // 纵向下方向检测
     "getHorizontalWeightToBottom": function (gameList, x, y, turn) {
-        // var _p = gameList[x][y];
         var _p = turn;
         if (y < 14) {
             // 右侧相等 或者为空
@@ -216,13 +217,90 @@ module.exports = {
         }
     },
 
+    // 左上方向检测
+    "getLeftTopWeight": function (gameList, x, y, turn) {
+        var _p = turn;
+        console.log("sss");
+        if (y > 0 && x > 0) {
+            // 右侧相等 或者为空
+            if (_p == gameList[x - 1][y - 1]) {
+                var point = {
+                    x: x,
+                    y: y
+                }
+                weight_list.push(point);
+                this.getLeftTopWeight(gameList, x - 1, y - 1, turn);
+            }
+            // else if (_p != gameList[x - 1][y - 1] && gameList[x][y + 1] != 0) {
+
+            // }
+        }
+    },
+
+    // 左下方
+    "getLeftBottomWeight": function (gameList, x, y, turn) {
+        var _p = turn;
+        if (y < 14 && x > 0) {
+            // 右侧相等 或者为空
+            if (_p == gameList[x - 1][y + 1]) {
+                var point = {
+                    x: x,
+                    y: y
+                }
+                weight_list.push(point);
+                this.getLeftBottomWeight(gameList, x - 1, y + 1, turn);
+            }
+            // else if (_p != gameList[x - 1][y - 1] && gameList[x][y + 1] != 0) {
+
+            // }
+        }
+    },
+
+    // 右上方检测
+    "getRightTopWeight": function (gameList, x, y, turn) {
+        var _p = turn;
+        if (y > 0 && x < 14) {
+            // 右侧相等 或者为空
+            if (_p == gameList[x + 1][y - 1]) {
+                var point = {
+                    x: x,
+                    y: y
+                }
+                weight_list.push(point);
+                this.getRightTopWeight(gameList, x + 1, y - 1, turn);
+            }
+            // else if (_p != gameList[x - 1][y - 1] && gameList[x][y + 1] != 0) {
+
+            // }
+        }
+    },
+
+    // 右下方检测
+    "getRightBottomWeight": function (gameList, x, y, turn) {
+        var _p = turn;
+        if (y < 14 && x < 14) {
+            // 右侧相等 或者为空
+            if (_p == gameList[x + 1][y + 1]) {
+                var point = {
+                    x: x,
+                    y: y
+                }
+                weight_list.push(point);
+                this.getRightBottomWeight(gameList, x + 1, y + 1, turn);
+            }
+            // else if (_p != gameList[x - 1][y - 1] && gameList[x][y + 1] != 0) {
+
+            // }
+        }
+    },
+
     // 检测威胁点
     "checkDanger": function () {
         window.needComputePlace = [];
         for (var i = 0; i < gameList.length; i++) {
             for (var k = 0; k < gameList[i].length; k++) {
                 if (gameList[i][k] == 0) {
-
+                    // 
                     if (i < 14 && gameList[i + 1][k]) {
                         if (gameList[i + 1][k] != 0) {
                             (function (a, b) {
@@ -266,13 +344,58 @@ module.exports = {
                             })(i, k)
                         }
                     }
+
+                    //左上威胁
+                    if (k > 0 && i > 0) {
+                        if (gameList[i - 1][k - 1] != 0) {
+                            (function (a, b) {
+                                var _t = {};
+                                _t.x = a;
+                                _t.y = b;
+                                window.needComputePlace.push(_t);
+                            })(i, k)
+                        }
+                    }
+
+                    //左下威胁
+                    if (k < 14 && i > 0) {
+                        if (gameList[i - 1][k + 1] != 0) {
+                            (function (a, b) {
+                                var _t = {};
+                                _t.x = a;
+                                _t.y = b;
+                                window.needComputePlace.push(_t);
+                            })(i, k)
+                        }
+                    }
+                    // 右上威胁
+                    if (i < 14 && k > 0) {
+                        if (gameList[i + 1][k - 1] != 0) {
+                            (function (a, b) {
+                                var _t = {};
+                                _t.x = a;
+                                _t.y = b;
+                                window.needComputePlace.push(_t);
+                            })(i, k)
+                        }
+                    }
+
+                    // 右下威胁
+                    if (i < 14 && k < 14) {
+                        if (gameList[i + 1][k + 1] != 0) {
+                            (function (a, b) {
+                                var _t = {};
+                                _t.x = a;
+                                _t.y = b;
+                                window.needComputePlace.push(_t);
+                            })(i, k)
+                        }
+                    }
                 }
             }
         }
 
-
+        console.log(window.needComputePlace);
 
     }
-
-
 }

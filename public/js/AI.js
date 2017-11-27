@@ -13,42 +13,9 @@ function AI() {
 }
 
 AI.prototype = {
+    
     "init": function () {
         // console.log("AI ready");
-    },
-
-    // 检测棋盘
-    "checkGameList": function (gameList) {
-        for (var i = 0; i < gameList.length; i++) {
-
-            for (var j = 0; j < gameList[i].length; j++) {
-                // 横向检测条件
-                if (x < 14 && gameList[i][j] != 0) {
-                    this.checkHorizontal(gameList, i, j);
-                }
-            }
-        }
-    },
-    // 横排检测
-    "checkHorizontal": function (gameList, i, j) {
-        var _obj = {};
-        if (gameList[i][j] == gameList[i + 1][j]) {
-            _obj.x = i;
-            _obj.y = j;
-            this.horizontalList.push(_obj);
-        }
-    },
-    // 竖排检测
-    "checkVertica": function () {
-
-    },
-    // 副对角线
-    "checkViceDiagonal": function () {
-
-    },
-    // 主对角线
-    "checkMainDiagonal": function () {
-
     },
 
     /*
@@ -103,7 +70,7 @@ AI.prototype = {
             var _winPoint = util.getMostDangerPlace(_win_weight_list);
             var _dangerPoint = util.getMostDangerPlace(_danger_weight_list);
 
-            if (_winPoint.weight >= _dangerPoint.weight) {
+            if (_winPoint.weight > _dangerPoint.weight) {
                 position = {
                     x: _winPoint.x,
                     y: _winPoint.y
