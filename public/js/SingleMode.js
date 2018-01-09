@@ -73,6 +73,8 @@ module.exports.start = function () {
         //生成棋子 
         var piece = gameLogic.shotPiece(gameTurn, _pos);
         Hamster.add(piece);
+
+        // 检测游戏结果
         window.result = gameLogic.getResult(gameList, position.x, position.y);
 
         //  转换回合

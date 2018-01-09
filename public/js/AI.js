@@ -24,9 +24,14 @@ AI.prototype = {
      */
 
     "shotPiece": function (gameTurn, gameList) {
+
+        // 胜利的权重列表
         var _win_weight_list = [];
+        // 失败的权重列表 
         var _danger_weight_list = [];
+        // 生成需要检测的威胁落子点
         gameLogic.checkDanger();
+
         var position = {};
 
         if (window.needComputePlace.length > 0) {
@@ -67,6 +72,7 @@ AI.prototype = {
             console.log("防守");
             console.log(_danger_weight_list);
 
+            //计算出最具有威胁的点
             var _winPoint = util.getMostDangerPlace(_win_weight_list);
             var _dangerPoint = util.getMostDangerPlace(_danger_weight_list);
 
@@ -89,10 +95,14 @@ AI.prototype = {
             }
         }
 
-        // if (window.userLastPieceLocation != null) {
-        //     var weight = gameLogic.getTheGameWeight(gameList, window.userLastPieceLocation.x, window.userLastPieceLocation.y);
-        //     console.log(weight);
-        // }
+        if(window.killPosition.length>0){
+            position = {
+                x: window.killPosition[0].x,
+                y: window.killPosition[0].y
+            }
+        }
+
+        window.killPosition = [];
 
         var _pos = util.setPositionByBoardPosition(position.x, position.y);
         var rightPlace = gameLogic.setPieceInGameList(gameTurn, gameList, position);
@@ -109,6 +119,8 @@ AI.prototype = {
 
         util.AIDelayShot(500, function () {
             Hamster.add(piece);
+            // AI落子后判断是否游戏结束
+            window.result = gameLogic.getResult(gameList, position.x, position.y);
             window.isUserTurn = true;
         });
     }

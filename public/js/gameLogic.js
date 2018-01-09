@@ -5,8 +5,15 @@
 // 权重临时数组
 var weight_list = [];
 
+var _tempCount = 0;
+
 // 需要计算权重的数组
 window.needComputePlace = [];
+
+// 直接可以杀死比赛的点  已经三连两气  或者已经4连一气
+window.killPosition = [];
+
+window.weightNumber = 0;
 
 module.exports = {
     // 放棋子
@@ -133,50 +140,113 @@ module.exports = {
 
         var leftBottomWeight = this.getLeftBottomWeight(gameList, x, y, turn);
         var rightBottomWeight = this.getRightBottomWeight(gameList, x, y, turn);
-      
-        _temp = _temp.concat(horizontalLeftWeight).concat(horizontalLeftWeight);
+
         return weight_list;
     },
 
-    // 纵向权重
-    "getVerticaWeight": function (gameList, x, y) {
-        var _p = gameList[x][y];
-
-    },
     // 横向右边权重
     "getHorizontalWeightToRight": function (gameList, x, y, turn) {
-        // var _p = gameList[x][y];
         var _p = turn;
+
         if (x <= 10) {
+
             // 右侧相等 或者为空
-            if (_p == gameList[x + 1][y]) {
+            if (_p == gameList[x + 1][y] || gameList[x+1][y] == 0) {
                 var point = {
                     x: x,
                     y: y
                 }
                 weight_list.push(point);
-                this.getHorizontalWeightToRight(gameList, x + 1, y, turn);
-            } else if (_p != gameList[x + 1][y] && gameList[x + 1][y] != 0) {
 
-            }
+                if(gameList[x+1][y] == 0){
+                    if(_tempCount == 3){
+                        console.log("very danger");
+                        var _dangerPoint = {
+                            x:x+1,
+                            y:y,
+                            weight:_tempCount*10
+                        }
+
+                        window.killPosition.push(_dangerPoint);
+                        console.log(window.killPosition);
+                    }
+
+                    _tempCount = 0;
+                    return;
+                }
+
+                if(gameList[x+1][y]!=0){
+
+                    console.warn(_tempCount);
+                    if(_tempCount == 3){
+                        var _dangerPoint = {
+                            x:x-3,
+                            y:y,
+                            weight:_tempCount*10
+                        }
+
+                        window.killPosition.push(_dangerPoint);
+                    }
+                }
+
+                _tempCount ++ ;
+                this.getHorizontalWeightToRight(gameList, x + 1, y, turn);
+                return;
+            } 
+            _tempCount = 0;
         }
     },
+
     // 横向左方向检测
     "getHorizontalWeightToLeft": function (gameList, x, y, turn) {
-        // var _p = gameList[x][y];
         var _p = turn;
         if (x > 0) {
             // 右侧相等 或者为空
-            if (_p == gameList[x - 1][y]) {
+            if (_p == gameList[x - 1][y] || gameList[x-1][y] == 0) {
                 var point = {
                     x: x,
                     y: y
                 }
                 weight_list.push(point);
-                this.getHorizontalWeightToLeft(gameList, x - 1, y, turn);
-            } else if (_p != gameList[x - 1][y] && gameList[x - 1][y] != 0) {
 
-            }
+                if(gameList[x-1][y] == 0){
+                    if(_tempCount == 3){
+                        console.log("very danger");
+                        var _dangerPoint = {
+                            x:x-1,
+                            y:y,
+                            weight:_tempCount*10
+                        }
+
+                        window.killPosition.push(_dangerPoint);
+                        console.log(window.killPosition);
+                    }
+
+                    _tempCount = 0;
+                    return;
+                }
+
+                if(gameList[x-1][y]!=0){
+
+                    console.warn(_tempCount);
+                    if(_tempCount == 3){
+                        var _dangerPoint = {
+                            x:x+3,
+                            y:y,
+                            weight:_tempCount*10
+                        }
+
+                        window.killPosition.push(_dangerPoint);
+                    }
+                }
+
+                _tempCount ++ ;
+                this.getHorizontalWeightToLeft(gameList,[x-1],y,turn);
+                return;
+            } 
+            
+            _tempCount = 0;
+            
         }
     },
 
@@ -220,7 +290,6 @@ module.exports = {
     // 左上方向检测
     "getLeftTopWeight": function (gameList, x, y, turn) {
         var _p = turn;
-        console.log("sss");
         if (y > 0 && x > 0) {
             // 右侧相等 或者为空
             if (_p == gameList[x - 1][y - 1]) {
@@ -394,8 +463,5 @@ module.exports = {
                 }
             }
         }
-
-        console.log(window.needComputePlace);
-
     }
 }

@@ -43,8 +43,7 @@ module.exports.start = function () {
         }
         //生成棋子 
         var piece = gameLogic.shotPiece(gameTurn, _pos);
-        console.log(_pos);
-        console.log(position);
+        
         Hamster.add(piece);
         // 获取游戏结果以及判定
         result = gameLogic.getResult(gameList, position.x, position.y);
@@ -53,6 +52,7 @@ module.exports.start = function () {
         } else {
             gameTurn = 0;
         }
+        
         UI.changedSideText(gameTurn);
     });
 
