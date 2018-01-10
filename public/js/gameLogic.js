@@ -340,6 +340,7 @@ module.exports = {
                         window.killPosition.push(_dangerPoint);
                     }
                 }
+                
                 _tempCount ++ ;
                 this.getHorizontalWeightToBottom(gameList, x, y + 1, turn);
                 return;
@@ -354,15 +355,46 @@ module.exports = {
         var _p = turn;
         if (y > 0 && x > 0) {
             // 右侧相等 或者为空
-            if (_p == gameList[x - 1][y - 1]) {
+            if (_p == gameList[x - 1][y - 1] || gameList[x-1][y-1] == 0) {
                 var point = {
                     x: x,
                     y: y
                 }
                 weight_list.push(point);
+
+                if(gameList[x-1][y-1] == 0){
+                    if(_tempCount == 3){
+                        var _dangerPoint = {
+                            x:x-1,
+                            y:y-1,
+                            weight:_tempCount*10
+                        }
+                        console.log("左上方很危险");
+                        window.killPosition.push(_dangerPoint);
+                    }
+
+                    _tempCount = 0;
+                    return;
+                }
+                
+                if(gameList[x-1][y-1]!=0){
+
+                    if(_tempCount == 3){
+                        var _dangerPoint = {
+                            x:x+3,
+                            y:y+3,
+                            weight:_tempCount*10
+                        }
+                        console.log("左上方很危险");
+                        window.killPosition.push(_dangerPoint);
+                    }
+                }
+
+                _tempCount ++ ;
                 this.getLeftTopWeight(gameList, x - 1, y - 1, turn);
+                return;
             }
-           
+            _tempCount = 0;
         }
     },
 
@@ -390,17 +422,46 @@ module.exports = {
         var _p = turn;
         if (y > 0 && x < 14) {
             // 右侧相等 或者为空
-            if (_p == gameList[x + 1][y - 1]) {
+            if (_p == gameList[x + 1][y - 1] || gameList[x+1][y-1]==0) {
                 var point = {
                     x: x,
                     y: y
                 }
                 weight_list.push(point);
+
+                if(gameList[x+1][y-1] == 0){
+                    if(_tempCount == 3){
+                        var _dangerPoint = {
+                            x:x+1,
+                            y:y-1,
+                            weight:_tempCount*10
+                        }
+                        console.log("右上角很危险");
+                        window.killPosition.push(_dangerPoint);
+                    }
+
+                    _tempCount = 0;
+                    return;
+                }
+
+                if(gameList[x+1][y-1]!=0){
+
+                    if(_tempCount == 3){
+                        var _dangerPoint = {
+                            x:x-3,
+                            y:y+3,
+                            weight:_tempCount*10
+                        }
+                        console.log("右上角很危险");
+                        window.killPosition.push(_dangerPoint);
+                    }
+                }
+
+                _tempCount ++ ;
                 this.getRightTopWeight(gameList, x + 1, y - 1, turn);
             }
-            // else if (_p != gameList[x - 1][y - 1] && gameList[x][y + 1] != 0) {
-
-            // }
+            
+            _tempCount = 0;
         }
     },
 
