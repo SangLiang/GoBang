@@ -66,11 +66,11 @@ AI.prototype = {
                 _o.weight = weight.length;
                 _danger_weight_list.push(_o);
             }
-            console.log("进攻");
-            console.log(_win_weight_list);
+            // console.log("进攻");
+            // console.log(_win_weight_list);
 
-            console.log("防守");
-            console.log(_danger_weight_list);
+            // console.log("防守");
+            // console.log(_danger_weight_list);
 
             //计算出最具有威胁的点
             var _winPoint = util.getMostDangerPlace(_win_weight_list);

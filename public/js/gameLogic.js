@@ -128,6 +128,9 @@ module.exports = {
         var _temp = [];
         weight_list = [];
 
+        var x = parseInt(x);
+        var y = parseInt(y);
+
         // 获取x轴上面的权重
         var horizontalRightWeight = this.getHorizontalWeightToRight(gameList, x, y, turn);
         var horizontalLeftWeight = this.getHorizontalWeightToLeft(gameList, x, y, turn);
@@ -160,15 +163,13 @@ module.exports = {
 
                 if(gameList[x+1][y] == 0){
                     if(_tempCount == 3){
-                        console.log("very danger");
                         var _dangerPoint = {
-                            x:x+1,
+                            x:parseInt(x)+1,
                             y:y,
                             weight:_tempCount*10
                         }
-
+                        console.log("右边很危险");
                         window.killPosition.push(_dangerPoint);
-                        console.log(window.killPosition);
                     }
 
                     _tempCount = 0;
@@ -177,14 +178,13 @@ module.exports = {
 
                 if(gameList[x+1][y]!=0){
 
-                    console.warn(_tempCount);
                     if(_tempCount == 3){
                         var _dangerPoint = {
-                            x:x-3,
+                            x:parseInt(x)-3,
                             y:y,
                             weight:_tempCount*10
                         }
-
+                        console.log("右边很危险");
                         window.killPosition.push(_dangerPoint);
                     }
                 }
@@ -208,18 +208,18 @@ module.exports = {
                     y: y
                 }
                 weight_list.push(point);
-
+                
+                // 当左边的棋子为气孔且有三连情况
                 if(gameList[x-1][y] == 0){
                     if(_tempCount == 3){
-                        console.log("very danger");
+                        
                         var _dangerPoint = {
-                            x:x-1,
+                            x:parseInt(x)-1,
                             y:y,
                             weight:_tempCount*10
                         }
-
+                        console.log("左边很危险");
                         window.killPosition.push(_dangerPoint);
-                        console.log(window.killPosition);
                     }
 
                     _tempCount = 0;
@@ -227,15 +227,15 @@ module.exports = {
                 }
 
                 if(gameList[x-1][y]!=0){
-
-                    console.warn(_tempCount);
                     if(_tempCount == 3){
                         var _dangerPoint = {
-                            x:x+3,
+                            x:parseInt(x)+3,
                             y:y,
                             weight:_tempCount*10
                         }
 
+                        console.log("左边很危险");
+                        console.log(_dangerPoint.x,y);
                         window.killPosition.push(_dangerPoint);
                     }
                 }
@@ -252,20 +252,52 @@ module.exports = {
 
     // 纵向上方向检测
     "getHorizontalWeightToTop": function (gameList, x, y, turn) {
-        // var _p = gameList[x][y];
         var _p = turn;
+
         if (y > 0) {
             // 右侧相等 或者为空
-            if (_p == gameList[x][y - 1]) {
+            if (_p == gameList[x][y - 1] || gameList[x][y-1] == 0) {
                 var point = {
                     x: x,
                     y: y
                 }
                 weight_list.push(point);
-                this.getHorizontalWeightToTop(gameList, x, y - 1, turn);
-            } else if (_p != gameList[x][y - 1] && gameList[x][y - 1] != 0) {
 
-            }
+                if(gameList[x][y-1] == 0){
+                    if(_tempCount == 3){
+                        var _dangerPoint = {
+                            x:x,
+                            y:y-1,
+                            weight:_tempCount*10
+                        }
+                        console.log("纵向上方很危险");
+                        window.killPosition.push(_dangerPoint);
+                    }
+
+                    _tempCount = 0;
+                    return;
+                }
+                
+                if(gameList[x][y-1]!=0){
+
+                    if(_tempCount == 3){
+                        var _dangerPoint = {
+                            x:x,
+                            y:y+3,
+                            weight:_tempCount*10
+                        }
+                        console.log("纵向上方很危险");
+                        window.killPosition.push(_dangerPoint);
+                    }
+                }
+
+                _tempCount ++ ;
+                this.getHorizontalWeightToTop(gameList, x, y - 1, turn);
+                return;
+
+            } 
+
+            _tempCount = 0;
         }
     },
 
@@ -274,16 +306,46 @@ module.exports = {
         var _p = turn;
         if (y < 14) {
             // 右侧相等 或者为空
-            if (_p == gameList[x][y + 1]) {
+            if (_p == gameList[x][y + 1] || gameList[x][y+1] == 0) {
                 var point = {
                     x: x,
                     y: y
                 }
                 weight_list.push(point);
-                this.getHorizontalWeightToBottom(gameList, x, y + 1, turn);
-            } else if (_p != gameList[x][y - 1] && gameList[x][y + 1] != 0) {
 
-            }
+                if(gameList[x][y+1] == 0){
+                    if(_tempCount == 3){
+                        var _dangerPoint = {
+                            x:x,
+                            y:y+1,
+                            weight:_tempCount*10
+                        }
+                        console.log("纵向下方很危险");
+                        window.killPosition.push(_dangerPoint);
+                    }
+
+                    _tempCount = 0;
+                    return;
+                }
+
+                if(gameList[x][y+1]!=0){
+
+                    if(_tempCount == 3){
+                        var _dangerPoint = {
+                            x:x,
+                            y:y-3,
+                            weight:_tempCount*10
+                        }
+                        console.log("纵向下方很危险");
+                        window.killPosition.push(_dangerPoint);
+                    }
+                }
+                _tempCount ++ ;
+                this.getHorizontalWeightToBottom(gameList, x, y + 1, turn);
+                return;
+            } 
+            
+            _tempCount = 0;
         }
     },
 
@@ -300,9 +362,7 @@ module.exports = {
                 weight_list.push(point);
                 this.getLeftTopWeight(gameList, x - 1, y - 1, turn);
             }
-            // else if (_p != gameList[x - 1][y - 1] && gameList[x][y + 1] != 0) {
-
-            // }
+           
         }
     },
 
