@@ -1,37 +1,35 @@
 var gulp = require('gulp');
-var webserver = require('gulp-webserver');
+var connect = require('gulp-connect');
 var concat = require('gulp-concat');
-var browserify = require("gulp-browserify");
-// var rename = require('gulp-rename');
-// var uglify = require('gulp-uglify');
+var browserify = require("browserify");
+var babelify = require("babelify");
+var source = require('vinyl-source-stream');
 
 gulp.task('webserver', function () {
-	return gulp.src('./')
-		.pipe(webserver({
-			port:5000,
-			livereload: false,
-			directoryListing: true,
-			open: 'http://127.0.0.1:5000/index.html',
-		}));
+	connect.server({
+		port: 5000,
+		livereload: false,
+		root: './'
+	});
 });
 
-/** 整合js */
-gulp.task('brow', function() {
-	return gulp.src("public/js/main.js")
-		.pipe(browserify({
-			insertGlobals: true,
-			debug: !gulp.env.production
-		}))
-		.pipe(gulp.dest('./'));
+gulp.task('brow', function () {
+	return browserify({
+		entries: "./public/js/main.js",
+		debug: true
+	})
+		.transform(babelify, { presets: ['@babel/preset-env'] })
+		.bundle()
+		.pipe(source('main.js'))
+		.pipe(gulp.dest('./'))
+		.pipe(connect.reload());
 });
 
-// 监听任务
 gulp.task('watch', function () {
-	// gulp.watch("./public/sass/*.scss", ['sass']);
-	// gulp.watch(core_list, ["concat"]);
-	gulp.watch("./public/js/*.js",["brow"]);
+	gulp.watch("./public/js/*.js", gulp.series('brow'));
 });
 
-gulp.task('default', ['brow',"webserver","watch"], function() {
+gulp.task('default', gulp.series('brow', 'webserver', 'watch', function (done) {
 	console.log("Server is running now");
-});
+	done();
+}));
