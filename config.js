@@ -6,10 +6,10 @@
 var Res = {
     "images": [
         //---UI
-        { "src": "./public/resource/background.png", "name": "background" },
-        { "src": "./public/resource/black.png", "name": "black" },
-        { "src": "./public/resource/white.png", "name": "white" },
-        { "src": "./public/resource/black_bg.png", "name": "black_bg" },
+        { "src": "./resource/background.png", "name": "background" },
+        { "src": "./resource/black.png", "name": "black" },
+        { "src": "./resource/white.png", "name": "white" },
+        { "src": "./resource/black_bg.png", "name": "black_bg" },
     ],
     "fonts": [],
     "sound": []
