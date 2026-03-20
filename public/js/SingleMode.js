@@ -76,6 +76,15 @@ module.exports.start = function () {
 
         // 检测游戏结果
         window.result = gameLogic.getResult(gameList, position.x, position.y);
+        
+        // 如果游戏结束，显示获胜方
+        if (window.result) {
+            var winner = gameTurn == 0 ? 1 : 0; // 当前回合是获胜方的下一个，所以需要反过来
+            setTimeout(function() {
+                UI.showWinner(winner);
+            }, 1000);
+            return;
+        }
 
         //  转换回合
         if (window.gameTurn == 0) {

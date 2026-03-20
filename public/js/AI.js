@@ -2,6 +2,7 @@
 
 var util = require("./util");
 var gameLogic = require("./gameLogic");
+var UI = require("./UI");
 
 function AI() {
     var self = this;
@@ -121,6 +122,11 @@ AI.prototype = {
             Hamster.add(piece);
             // AI落子后判断是否游戏结束
             window.result = gameLogic.getResult(gameList, position.x, position.y);
+            if (window.result) {
+                setTimeout(function() {
+                    UI.showWinner(1); // AI是白棋，获胜
+                }, 1000);
+            }
             window.isUserTurn = true;
         });
     }

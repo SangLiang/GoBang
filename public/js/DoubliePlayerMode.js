@@ -47,6 +47,15 @@ module.exports.start = function () {
         Hamster.add(piece);
         // 获取游戏结果以及判定
         result = gameLogic.getResult(gameList, position.x, position.y);
+        
+        // 如果游戏结束，显示获胜方
+        if (result) {
+            setTimeout(function() {
+                UI.showWinner(gameTurn); // gameTurn 就是获胜方
+            }, 1000);
+            return;
+        }
+        
         if (gameTurn == 0) {
             gameTurn = 1;
         } else {

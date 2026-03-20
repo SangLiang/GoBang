@@ -9,7 +9,7 @@ var Res = {
         { "src": "./public/resource/background.png", "name": "background" },
         { "src": "./public/resource/black.png", "name": "black" },
         { "src": "./public/resource/white.png", "name": "white" },
-        
+        { "src": "./public/resource/black_bg.png", "name": "black_bg" },
     ],
     "fonts": [],
     "sound": []
