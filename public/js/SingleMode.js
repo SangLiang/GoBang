@@ -3,6 +3,7 @@ var UI = require("./UI");
 var util = require("./util.js");
 var gameLogic = require('./gameLogic.js');
 var AI = require("./AI");
+var trainingApi = require("./trainingApi");
 
 window.gameList = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -28,6 +29,10 @@ window.userLastPieceLocation = null;
 window.result = false;
 
 module.exports.start = function () {
+    // 每次进入单人模式都重置训练日志相关状态
+    window.hasLoggedSingleResult = false;
+    window.moveCountSingle = 0;
+
     Hamster.add(UI.background);
     Hamster.add(UI.turnUI);
 
@@ -70,6 +75,8 @@ module.exports.start = function () {
             return;
         }
 
+        window.moveCountSingle++;
+
         //生成棋子 
         var piece = gameLogic.shotPiece(gameTurn, _pos);
         Hamster.add(piece);
@@ -80,6 +87,17 @@ module.exports.start = function () {
         // 如果游戏结束，显示获胜方
         if (window.result) {
             var winner = gameTurn == 0 ? 1 : 0; // 当前回合是获胜方的下一个，所以需要反过来
+            if (!window.hasLoggedSingleResult) {
+                window.hasLoggedSingleResult = true;
+                trainingApi.appendTrainingLog({
+                    "mode": "single",
+                    "result": "win-user",
+                    "winnerSide": "black",
+                    "moves": trainingApi.countStones(gameList),
+                    "schemaVersion": 1,
+                    "ts": new Date().toISOString()
+                });
+            }
             setTimeout(function() {
                 UI.showWinner(winner);
             }, 1000);

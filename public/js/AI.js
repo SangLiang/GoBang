@@ -3,6 +3,7 @@
 var util = require("./util");
 var gameLogic = require("./gameLogic");
 var UI = require("./UI");
+var trainingApi = require("./trainingApi");
 
 function AI() {
     var self = this;
@@ -100,6 +101,7 @@ AI.prototype = {
         var rightPlace = gameLogic.setPieceInGameList(gameTurn, gameList, position);
 
         if (!rightPlace) return;
+        window.moveCountSingle = (window.moveCountSingle || 0) + 1;
         var piece = gameLogic.shotPiece(gameTurn, _pos);
 
         // 切换回合
@@ -114,6 +116,17 @@ AI.prototype = {
             // AI落子后判断是否游戏结束
             window.result = gameLogic.getResult(gameList, position.x, position.y);
             if (window.result) {
+                if (!window.hasLoggedSingleResult) {
+                    window.hasLoggedSingleResult = true;
+                    trainingApi.appendTrainingLog({
+                        "mode": "single",
+                        "result": "win-ai",
+                        "winnerSide": "white",
+                        "moves": trainingApi.countStones(gameList),
+                        "schemaVersion": 1,
+                        "ts": new Date().toISOString()
+                    });
+                }
                 setTimeout(function() {
                     UI.showWinner(1); // AI是白棋，获胜
                 }, 1000);

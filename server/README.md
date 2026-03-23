@@ -42,3 +42,11 @@ fetch("http://127.0.0.1:3847/api/training").then(function (r) { return r.json();
 ## 数据文件
 
 - 默认路径：`data/ai-training.json`（已加入 `.gitignore`，不提交到仓库）
+
+## 与 GoBang 单人模式联动（M1）
+
+- 当前单人模式在**终局**时会尝试调用 `PUT /api/training/append`。
+- 因此开发时建议同时启动：
+  - 终端 1：`npm run server`
+  - 终端 2：`npm start`
+- 若训练 API 未启动，前端会 `console.warn`，但**不会中断游戏流程**。
