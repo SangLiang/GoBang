@@ -1,7 +1,7 @@
-"use strict";
+﻿"use strict";
 
 /**
- * M3-T2-b：双规则 AI 对弈统计（平均手数、是否死循环由步数上限隐含）。
+ * 双规则 AI 对弈统计（平均手数、是否死循环由步数上限隐含）。
  */
 
 var ruleAi = require("./ruleAi");
@@ -18,3 +18,4 @@ for (i = 0; i < N; i++) {
 }
 
 console.log("[benchmark-ruleai] games=%d avgMoves=%s", N, (totalMoves / N).toFixed(1));
+

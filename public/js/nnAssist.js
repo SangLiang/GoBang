@@ -1,4 +1,4 @@
-// 固定结构前向网络，用于 AI 落子辅助分（M2）
+﻿// 固定结构前向网络，用于 AI 落子辅助分
 //
 // 可选：在 data/ai-training.json 根级（或与 records 并列）写入：
 //   "nnAssistSchemaVersion": 1,
@@ -113,3 +113,4 @@ module.exports = {
 	tryApplySavedWeights: tryApplySavedWeights,
 	preloadWeightsFromTrainingApi: preloadWeightsFromTrainingApi
 };
+

@@ -1,5 +1,5 @@
-/**
- * 验收 playout：playOneGame、fitnessFromResult（计划 M3-T3）。
+﻿/**
+ * 验收 playout：playOneGame、fitnessFromResult。
  */
 
 "use strict";
@@ -36,3 +36,4 @@ function main() {
 }
 
 main();
+

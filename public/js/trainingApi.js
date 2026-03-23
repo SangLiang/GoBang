@@ -1,4 +1,4 @@
-// 训练数据接口（M1）：负责将局后日志写入本地 Node API
+﻿// 训练数据接口：负责将局后日志写入本地 Node API
 
 var DEFAULT_API_BASE = "http://127.0.0.1:3847";
 
@@ -74,3 +74,4 @@ module.exports = {
 	"appendTrainingLog": appendTrainingLog,
 	"countStones": countStones
 };
+

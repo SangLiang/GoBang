@@ -1,4 +1,4 @@
-# Node 离线进化（M3）
+﻿# Node 离线进化
 
 ## 与浏览器 AI 的差异
 
@@ -51,7 +51,7 @@ node scripts/evolve-ai.js
 - 在 **`data/evolved-<时间戳>.json`** 写入最优 `nnAssistWeights` 与 `nnAssistSchemaVersion: 1`。
 - 将其中字段合并进 **`data/ai-training.json` 根级**（与 `records` 并列），并启动 `npm run server`，前端在 NN 开启且 λ≠0 时会在单人开局 `GET /api/training` 加载。
 
-### 浏览器联调（计划 M3-T5-a）
+### 浏览器联调
 
 1. 终端 A：`npm run server`（3847）。终端 B：`npm start`（5000），用 **http://localhost:5000** 打开游戏（勿用 `file://`）。
 2. 在根目录 **`config.js`** 中设 **`NN_ASSIST_ENABLED: true`**、**`NN_LAMBDA`** 为 **0.05～0.12** 等非零值（与进化时 `NN_LAMBDA` 接近更易观察）。
@@ -67,10 +67,11 @@ node scripts/evolve-ai.js
 
 每代评估量 ≈ `POPULATION × GAMES_PER_INDIVIDUAL` 局；每局步数依棋力可达数十～百余手。例：种群 20 × 每体 3 局 × 5 代 ≈ 300 局对弈。
 
-## 规则 AI 对局统计（M3-T2-b）
+## 规则 AI 对局统计
 
 ```bash
 npm run benchmark:ruleai
 ```
 
 默认 100 盘 `ruleAi` 自对弈；局数可用环境变量 `BENCHMARK_GAMES` 修改。当前基线下常见结果为下满 225 手（和棋式终局），用于确认无死循环。
+

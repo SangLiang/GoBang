@@ -1,4 +1,4 @@
-# 训练数据 API（Node）
+﻿# 训练数据 API（Node）
 
 ## 启动
 
@@ -43,7 +43,7 @@ fetch("http://127.0.0.1:3847/api/training").then(function (r) { return r.json();
 
 - 默认路径：`data/ai-training.json`（已加入 `.gitignore`，不提交到仓库）
 
-## NN 辅助权重（M2，可选）
+## NN 辅助权重
 
 在 `ai-training.json` 根对象可与 `records` 并列增加（也可用 `POST /api/training` 写入整文件）：
 
@@ -53,10 +53,11 @@ fetch("http://127.0.0.1:3847/api/training").then(function (r) { return r.json();
 
 单人模式在 **NN 已开启且 λ≠0** 时会在开局 `GET /api/training` 尝试加载；失败或未匹配则使用内置随机初始网。
 
-## 与 GoBang 单人模式联动（M1）
+## 与 GoBang 单人模式联动
 
 - 当前单人模式在**终局**时会尝试调用 `PUT /api/training/append`。
 - 因此开发时建议同时启动：
   - 终端 1：`npm run server`
   - 终端 2：`npm start`
 - 若训练 API 未启动，前端会 `console.warn`，但**不会中断游戏流程**。
+
