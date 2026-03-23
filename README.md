@@ -16,3 +16,40 @@ Hamster.js 五子棋（含训练 API、Node 离线进化脚本）。
 | **`npm run verify:nn-lambda`** | Node 侧抽检：`λ>0` 时 `nnAssistPick` 与纯 `ruleAi` 选点可不同（见计划 M3-T5-a′）。 |
 
 开发时常见组合：终端 A `npm run server`，终端 B `npm start`；改完前端执行 `npx gulp brow`（若未开 `gulp default` 的 watch）。
+
+## 运行与模式入口
+
+- 前端静态服务与训练 API 解耦：只开 `npm start` 也能正常对局；训练接口失败不会中断游戏。
+- 游戏入口在 `public/js/main.js`：按 `S` 进入单人模式（`SingleMode.start()`），按 `D` 进入双人模式。
+
+推荐联调流程：
+
+1. 终端 A：`npm run server`
+2. 终端 B：`npm start`
+3. 打开 `http://localhost:5000` 并按 `S` 进入单人模式
+
+## AI 决策流程（单人模式）
+
+AI 入口是 `public/js/AI.js` 的 `shotPiece(gameTurn, gameList)`，核心逻辑如下：
+
+1. 先通过 `checkDanger()` 生成候选点（`window.needComputePlace`），若为空回退天元 `(7,7)`。
+2. 规则分支（`NN_ASSIST_ENABLED=false` 或 `NN_LAMBDA=0`）：计算候选点的进攻/防守分，比较最大威胁点后落子。
+3. NN 混合分支（开启 NN 且 `lambda!=0`）：在规则分基础上追加 `assist` 分，按 `weight = patternScore + lambda * assist` 混合评分，再比较进攻/防守最大威胁点。
+4. 落子后统一做胜负检查；单人终局会通过训练 API 追加对局日志。
+
+当前 NN 辅助输入特征定义在 `public/js/nnFeatures.js`，特征维度为 `6`，默认网络形状为 `[6,4,1]`。
+
+## 训练数据接口与排障
+
+- 前端封装：`public/js/trainingApi.js`
+  - `GET /api/training`：拉取训练数据/权重
+  - `PUT /api/training/append`：追加单局日志
+- 服务端实现：`server/index.js`
+  - 读写文件：`data/ai-training.json`
+  - 兼容策略：请求异常仅告警并返回安全值，不阻断对局
+
+常见问题：
+
+- 看不到 NN 影响：检查 `public/js/config.js` 中 `NN_ASSIST_ENABLED` 与 `NN_LAMBDA`
+- 出现训练请求告警：确认 `npm run server` 已启动（`127.0.0.1:3847`）
+- 需要回到纯规则 AI：设 `NN_ASSIST_ENABLED=false` 或 `NN_LAMBDA=0`

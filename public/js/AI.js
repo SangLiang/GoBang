@@ -62,6 +62,13 @@ AI.prototype = {
             var stonesOnBoard = trainingApi.countStones(gameList);
 
             if (useNnAssist) {
+                console.log("[AI][NN] assist on", {
+                    "lambda": nnLambda,
+                    "candidateCount": candLen,
+                    "stonesOnBoard": stonesOnBoard,
+                    "turnAttack": _turnAttack,
+                    "turnDefense": _turnDefense
+                });
                 for (var i = 0; i < candLen; i++) {
                     var cx = window.needComputePlace[i].x;
                     var cy = window.needComputePlace[i].y;
@@ -79,12 +86,31 @@ AI.prototype = {
                     _ow.x = cx;
                     _ow.y = cy;
                     _ow.weight = attackScore + bump;
+                    _ow.assist = assist;
+                    _ow.bump = bump;
+                    _ow.patternScore = attackScore;
                     _win_weight_list.push(_ow);
                     var _od = {};
                     _od.x = cx;
                     _od.y = cy;
                     _od.weight = defenseScore + bump;
+                    _od.assist = assist;
+                    _od.bump = bump;
+                    _od.patternScore = defenseScore;
                     _danger_weight_list.push(_od);
+
+                    if (i < 3) {
+                        console.log("[AI][NN] cand", i, {
+                            "x": cx,
+                            "y": cy,
+                            "attackScore": attackScore,
+                            "defenseScore": defenseScore,
+                            "assist": assist,
+                            "bump": bump,
+                            "winWeight": _ow.weight,
+                            "dangerWeight": _od.weight
+                        });
+                    }
                 }
             } else {
                 for (var j = 0; j < candLen; j++) {
@@ -124,6 +150,14 @@ AI.prototype = {
                     x: _dangerPoint.x,
                     y: _dangerPoint.y
                 }
+            }
+
+            if (useNnAssist) {
+                console.log("[AI][NN] decide", {
+                    "winPoint": _winPoint,
+                    "dangerPoint": _dangerPoint,
+                    "selected": position
+                });
             }
 
         } else {
