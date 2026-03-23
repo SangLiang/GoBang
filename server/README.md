@@ -43,6 +43,16 @@ fetch("http://127.0.0.1:3847/api/training").then(function (r) { return r.json();
 
 - 默认路径：`data/ai-training.json`（已加入 `.gitignore`，不提交到仓库）
 
+## NN 辅助权重（M2，可选）
+
+在 `ai-training.json` 根对象可与 `records` 并列增加（也可用 `POST /api/training` 写入整文件）：
+
+- `nnAssistSchemaVersion`：固定为 **1**（与前端 `nnAssist.NN_ASSIST_SCHEMA_VERSION` 一致）。
+- `nnAssistWeights`：`Neuroevolution` 里 `Network.getSave()` 的形态 `{ "neurons": [6,4,1], "weights": [...] }`。  
+  亦兼容字段名 **`weights`**（须仍带 `nnAssistSchemaVersion`）。
+
+单人模式在 **NN 已开启且 λ≠0** 时会在开局 `GET /api/training` 尝试加载；失败或未匹配则使用内置随机初始网。
+
 ## 与 GoBang 单人模式联动（M1）
 
 - 当前单人模式在**终局**时会尝试调用 `PUT /api/training/append`。

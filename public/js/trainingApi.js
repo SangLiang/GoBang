@@ -9,6 +9,29 @@ function getTrainingApiBase() {
 	return DEFAULT_API_BASE;
 }
 
+function fetchTrainingData() {
+	var base = getTrainingApiBase();
+	return fetch(base + "/api/training", {
+		"method": "GET",
+		"headers": {
+			"Accept": "application/json"
+		}
+	}).then(function (res) {
+		if (!res.ok) {
+			throw new Error("fetch training failed: " + res.status);
+		}
+		return res.json();
+	}).then(function (body) {
+		if (!body || body.ok !== true) {
+			throw new Error("fetch training: response not ok");
+		}
+		return body.data;
+	}).catch(function (err) {
+		console.warn("[trainingApi]", err && err.message ? err.message : err);
+		return null;
+	});
+}
+
 function appendTrainingLog(entry) {
 	var base = getTrainingApiBase();
 	return fetch(base + "/api/training/append", {
@@ -47,6 +70,7 @@ function countStones(gameList) {
 
 module.exports = {
 	"getTrainingApiBase": getTrainingApiBase,
+	"fetchTrainingData": fetchTrainingData,
 	"appendTrainingLog": appendTrainingLog,
 	"countStones": countStones
 };

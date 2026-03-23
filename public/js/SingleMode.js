@@ -4,6 +4,7 @@ var util = require("./util.js");
 var gameLogic = require('./gameLogic.js');
 var AI = require("./AI");
 var trainingApi = require("./trainingApi");
+var nnAssist = require("./nnAssist");
 
 window.gameList = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -32,6 +33,13 @@ module.exports.start = function () {
     // 每次进入单人模式都重置训练日志相关状态
     window.hasLoggedSingleResult = false;
     window.moveCountSingle = 0;
+
+    var nnLoadOn =
+        typeof NN_ASSIST_ENABLED !== "undefined" && NN_ASSIST_ENABLED &&
+        typeof NN_LAMBDA === "number" && NN_LAMBDA !== 0;
+    if (nnLoadOn) {
+        nnAssist.preloadWeightsFromTrainingApi();
+    }
 
     Hamster.add(UI.background);
     Hamster.add(UI.turnUI);
