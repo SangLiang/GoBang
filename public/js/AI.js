@@ -45,11 +45,11 @@ AI.prototype = {
                 _turn = 2;
             }
             for (var i = 0; i < window.needComputePlace.length; i++) {
-                var weight = gameLogic.getTheGameWeight(gameList, window.needComputePlace[i].x, window.needComputePlace[i].y, _turn);
+                var score = gameLogic.getTheGameWeight(gameList, window.needComputePlace[i].x, window.needComputePlace[i].y, _turn);
                 var _o = {};
                 _o.x = window.needComputePlace[i].x;
                 _o.y = window.needComputePlace[i].y;
-                _o.weight = weight.length;
+                _o.weight = score;
                 _win_weight_list.push(_o);
             }
 
@@ -60,11 +60,11 @@ AI.prototype = {
             }
 
             for (var i = 0; i < window.needComputePlace.length; i++) {
-                var weight = gameLogic.getTheGameWeight(gameList, window.needComputePlace[i].x, window.needComputePlace[i].y, _turn);
+                var score = gameLogic.getTheGameWeight(gameList, window.needComputePlace[i].x, window.needComputePlace[i].y, _turn);
                 var _o = {};
                 _o.x = window.needComputePlace[i].x;
                 _o.y = window.needComputePlace[i].y;
-                _o.weight = weight.length;
+                _o.weight = score;
                 _danger_weight_list.push(_o);
             }
             // console.log("进攻");
@@ -95,15 +95,6 @@ AI.prototype = {
                 y: 7
             }
         }
-
-        if(window.killPosition.length>0){
-            position = {
-                x: window.killPosition[0].x,
-                y: window.killPosition[0].y
-            }
-        }
-
-        window.killPosition = [];
 
         var _pos = util.setPositionByBoardPosition(position.x, position.y);
         var rightPlace = gameLogic.setPieceInGameList(gameTurn, gameList, position);

@@ -2,17 +2,143 @@
  * 游戏核心逻辑
  */
 
-// 权重临时数组
-var weight_list = [];
-
-
 // 需要计算权重的数组
 window.needComputePlace = [];
 
-// 直接可以杀死比赛的点  已经三连两气  或者已经4连一气
+// 直接可以杀死比赛的点（保留全局，当前由棋形评分覆盖，不再在此处写入）
 window.killPosition = [];
 
 window.weightNumber = 0;
+
+/* ---------- 棋形评分：假设在 (mx,my) 为 player 落子，沿一线分析 ---------- */
+
+function virtualCell(gameList, cx, cy, mx, my, player) {
+	if (cx === mx && cy === my) {
+		return player;
+	}
+	if (cx < 0 || cy < 0 || cx > 14 || cy > 14) {
+		return -1;
+	}
+	return gameList[cx][cy];
+}
+
+// 沿 (dx,dy) 方向统计与落子点相连的同色子数，并得到左右外侧第一格是否为空
+function scanConnectedLine(gameList, mx, my, dx, dy, player) {
+	var left = 0;
+	var cx = mx - dx;
+	var cy = my - dy;
+	while (cx >= 0 && cy >= 0 && cx <= 14 && cy <= 14) {
+		if (virtualCell(gameList, cx, cy, mx, my, player) !== player) {
+			break;
+		}
+		left++;
+		cx -= dx;
+		cy -= dy;
+	}
+	var lx = cx;
+	var ly = cy;
+
+	var right = 0;
+	cx = mx + dx;
+	cy = my + dy;
+	while (cx >= 0 && cy >= 0 && cx <= 14 && cy <= 14) {
+		if (virtualCell(gameList, cx, cy, mx, my, player) !== player) {
+			break;
+		}
+		right++;
+		cx += dx;
+		cy += dy;
+	}
+	var rx = cx;
+	var ry = cy;
+
+	var total = 1 + left + right;
+	var leftOpen = (lx >= 0 && ly >= 0 && lx <= 14 && ly <= 14 && gameList[lx][ly] === 0);
+	var rightOpen = (rx >= 0 && ry >= 0 && rx <= 14 && ry <= 14 && gameList[rx][ry] === 0);
+
+	return {
+		"total": total,
+		"leftOpen": leftOpen,
+		"rightOpen": rightOpen
+	};
+}
+
+// 单线棋形 → 分数与类型（用于组合加成）
+function linePatternScore(total, leftOpen, rightOpen) {
+	// 成五 / 长连
+	if (total >= 5) {
+		return { "score": 1000000, "kind": "FIVE" };
+	}
+	if (total === 4) {
+		if (leftOpen && rightOpen) {
+			return { "score": 120000, "kind": "OPEN4" };
+		}
+		if (leftOpen || rightOpen) {
+			return { "score": 15000, "kind": "RUSH4" };
+		}
+		return { "score": 220, "kind": "DEAD4" };
+	}
+	if (total === 3) {
+		if (leftOpen && rightOpen) {
+			return { "score": 2800, "kind": "OPEN3" };
+		}
+		if (leftOpen || rightOpen) {
+			return { "score": 650, "kind": "SLEEP3" };
+		}
+		return { "score": 120, "kind": "DEAD3" };
+	}
+	if (total === 2) {
+		if (leftOpen && rightOpen) {
+			return { "score": 180, "kind": "OPEN2" };
+		}
+		if (leftOpen || rightOpen) {
+			return { "score": 55, "kind": "SLEEP2" };
+		}
+		return { "score": 15, "kind": "DEAD2" };
+	}
+	if (leftOpen && rightOpen) {
+		return { "score": 35, "kind": "OPEN1" };
+	}
+	if (leftOpen || rightOpen) {
+		return { "score": 10, "kind": "SLEEP1" };
+	}
+	return { "score": 3, "kind": "LOW" };
+}
+
+// 四方向（横、竖、两斜）累计 + 双活三 / 双冲四 加成
+function computePatternScoreAt(gameList, mx, my, player) {
+	if (gameList[mx][my] !== 0) {
+		return 0;
+	}
+	var dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+	var sum = 0;
+	var open3Count = 0;
+	var rush4Count = 0;
+	var i;
+	var d;
+	var scan;
+	var r;
+
+	for (i = 0; i < dirs.length; i++) {
+		d = dirs[i];
+		scan = scanConnectedLine(gameList, mx, my, d[0], d[1], player);
+		r = linePatternScore(scan.total, scan.leftOpen, scan.rightOpen);
+		sum += r.score;
+		if (r.kind === "OPEN3") {
+			open3Count++;
+		}
+		if (r.kind === "RUSH4") {
+			rush4Count++;
+		}
+	}
+	if (open3Count >= 2) {
+		sum += 12000;
+	}
+	if (rush4Count >= 2) {
+		sum += 80000;
+	}
+	return sum;
+}
 
 module.exports = {
     // 放棋子
@@ -122,388 +248,9 @@ module.exports = {
         }
     },
 
-    // 获取权重点
+    // 棋形评分：假设 turn(1黑/2白) 落在空位 (x,y)，四向连成段 + 活三/冲四组合加成
     "getTheGameWeight": function (gameList, x, y, turn) {
-        var _temp = [];
-        weight_list = [];
-
-        var x = parseInt(x);
-        var y = parseInt(y);
-
-        // 每个方向独立计算权重，使用各自的计数器
-        // 获取x轴上面的权重
-        this.getHorizontalWeightToRight(gameList, x, y, turn, 0);
-        this.getHorizontalWeightToLeft(gameList, x, y, turn, 0);
-
-        this.getHorizontalWeightToTop(gameList, x, y, turn, 0);
-        this.getHorizontalWeightToBottom(gameList, x, y, turn, 0);
-
-        this.getLeftTopWeight(gameList, x, y, turn, 0);
-        this.getRightTopWeight(gameList, x, y, turn, 0);
-
-        this.getLeftBottomWeight(gameList, x, y, turn, 0);
-        this.getRightBottomWeight(gameList, x, y, turn, 0);
-
-        return weight_list;
-    },
-
-    // 横向右边权重
-    "getHorizontalWeightToRight": function (gameList, x, y, turn, _tempCount) {
-        var _p = turn;
-
-        if (x <= 10) {
-
-            // 右侧相等 或者为空
-            if (_p == gameList[x + 1][y] || gameList[x+1][y] == 0) {
-                var point = {
-                    x: x,
-                    y: y
-                }
-                weight_list.push(point);
-
-                if(gameList[x+1][y] == 0){
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:parseInt(x)+1,
-                            y:y,
-                            weight:_tempCount*10
-                        }
-                        console.log("横向右侧有空位可落子（三连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-
-                    return;
-                }
-
-                if(gameList[x+1][y]!=0){
-
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:parseInt(x)-3,
-                            y:y,
-                            weight:_tempCount*10
-                        }
-                        console.log("横向左侧有空位需防守（四连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-                }
-
-                this.getHorizontalWeightToRight(gameList, x + 1, y, turn, _tempCount + 1);
-                return;
-            }
-        }
-    },
-
-    // 横向左方向检测
-    "getHorizontalWeightToLeft": function (gameList, x, y, turn, _tempCount) {
-        var _p = turn;
-        if (x > 0) {
-            // 右侧相等 或者为空
-            if (_p == gameList[x - 1][y] || gameList[x-1][y] == 0) {
-                var point = {
-                    x: x,
-                    y: y
-                }
-                weight_list.push(point);
-
-                // 当左边的棋子为气孔且有三连情况
-                if(gameList[x-1][y] == 0){
-                    if(_tempCount == 3){
-
-                        var _dangerPoint = {
-                            x:parseInt(x)-1,
-                            y:y,
-                            weight:_tempCount*10
-                        }
-                        console.log("横向左侧有空位可落子（三连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-
-                    return;
-                }
-
-                if(gameList[x-1][y]!=0){
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:parseInt(x)+3,
-                            y:y,
-                            weight:_tempCount*10
-                        }
-
-                        console.log("横向右侧有空位需防守（四连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-                }
-
-                this.getHorizontalWeightToLeft(gameList, x - 1, y, turn, _tempCount + 1);
-                return;
-            }
-        }
-    },
-
-    // 纵向上方向检测
-    "getHorizontalWeightToTop": function (gameList, x, y, turn, _tempCount) {
-        var _p = turn;
-
-        if (y > 0) {
-            // 右侧相等 或者为空
-            if (_p == gameList[x][y - 1] || gameList[x][y-1] == 0) {
-                var point = {
-                    x: x,
-                    y: y
-                }
-                weight_list.push(point);
-
-                if(gameList[x][y-1] == 0){
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x,
-                            y:y-1,
-                            weight:_tempCount*10
-                        }
-                        console.log("纵向上方有空位可落子（三连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-
-                    return;
-                }
-
-                if(gameList[x][y-1]!=0){
-
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x,
-                            y:y+3,
-                            weight:_tempCount*10
-                        }
-                        console.log("纵向下方有空位需防守（四连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-                }
-
-                this.getHorizontalWeightToTop(gameList, x, y - 1, turn, _tempCount + 1);
-                return;
-
-            }
-        }
-    },
-
-    // 纵向下方向检测
-    "getHorizontalWeightToBottom": function (gameList, x, y, turn, _tempCount) {
-        var _p = turn;
-        if (y < 14) {
-            // 右侧相等 或者为空
-            if (_p == gameList[x][y + 1] || gameList[x][y+1] == 0) {
-                var point = {
-                    x: x,
-                    y: y
-                }
-                weight_list.push(point);
-
-                if(gameList[x][y+1] == 0){
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x,
-                            y:y+1,
-                            weight:_tempCount*10
-                        }
-                        console.log("纵向下方有空位可落子（三连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-
-                    return;
-                }
-
-                if(gameList[x][y+1]!=0){
-
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x,
-                            y:y-3,
-                            weight:_tempCount*10
-                        }
-                        console.log("纵向上方有空位需防守（四连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-                }
-
-                this.getHorizontalWeightToBottom(gameList, x, y + 1, turn, _tempCount + 1);
-                return;
-            }
-        }
-    },
-
-    // 左上方向检测
-    "getLeftTopWeight": function (gameList, x, y, turn, _tempCount) {
-        var _p = turn;
-        if (y > 0 && x > 0) {
-            // 右侧相等 或者为空
-            if (_p == gameList[x - 1][y - 1] || gameList[x-1][y-1] == 0) {
-                var point = {
-                    x: x,
-                    y: y
-                }
-                weight_list.push(point);
-
-                if(gameList[x-1][y-1] == 0){
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x-1,
-                            y:y-1,
-                            weight:_tempCount*10
-                        }
-                        console.log("左上方有空位可落子（三连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-
-                    return;
-                }
-
-                if(gameList[x-1][y-1]!=0){
-
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x+3,
-                            y:y+3,
-                            weight:_tempCount*10
-                        }
-                        console.log("右下方有空位需防守（四连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-                }
-
-                this.getLeftTopWeight(gameList, x - 1, y - 1, turn, _tempCount + 1);
-                return;
-            }
-        }
-    },
-
-    // 左下方
-    "getLeftBottomWeight": function (gameList, x, y, turn, _tempCount) {
-        var _p = turn;
-        if (y < 14 && x > 0) {
-            // 右侧相等 或者为空
-            if (_p == gameList[x - 1][y + 1] || gameList[x - 1][y + 1] == 0) {
-                var point = {
-                    x: x,
-                    y: y
-                }
-                weight_list.push(point);
-
-                if(gameList[x - 1][y + 1] == 0){
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x-1,
-                            y:y+1,
-                            weight:_tempCount*10
-                        }
-                        console.log("左下方有空位可落子（三连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-                    return;
-                }
-
-                if(gameList[x - 1][y + 1]!=0){
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x+3,
-                            y:y-3,
-                            weight:_tempCount*10
-                        }
-                        console.log("右上方有空位需防守（四连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-                }
-
-                this.getLeftBottomWeight(gameList, x - 1, y + 1, turn, _tempCount + 1);
-            }
-        }
-    },
-
-    // 右上方检测
-    "getRightTopWeight": function (gameList, x, y, turn, _tempCount) {
-        var _p = turn;
-        if (y > 0 && x < 14) {
-            // 右侧相等 或者为空
-            if (_p == gameList[x + 1][y - 1] || gameList[x+1][y-1]==0) {
-                var point = {
-                    x: x,
-                    y: y
-                }
-                weight_list.push(point);
-
-                if(gameList[x+1][y-1] == 0){
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x+1,
-                            y:y-1,
-                            weight:_tempCount*10
-                        }
-                        console.log("右上方有空位可落子（三连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-
-                    return;
-                }
-
-                if(gameList[x+1][y-1]!=0){
-
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x-3,
-                            y:y+3,
-                            weight:_tempCount*10
-                        }
-                        console.log("左下方有空位需防守（四连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-                }
-
-                this.getRightTopWeight(gameList, x + 1, y - 1, turn, _tempCount + 1);
-            }
-        }
-    },
-
-    // 右下方检测
-    "getRightBottomWeight": function (gameList, x, y, turn, _tempCount) {
-        var _p = turn;
-        if (y < 14 && x < 14) {
-            // 右侧相等 或者为空
-            if (_p == gameList[x + 1][y + 1] || gameList[x + 1][y + 1] == 0) {
-                var point = {
-                    x: x,
-                    y: y
-                }
-                weight_list.push(point);
-
-                if(gameList[x + 1][y + 1] == 0){
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x+1,
-                            y:y+1,
-                            weight:_tempCount*10
-                        }
-                        console.log("右下方有空位可落子（三连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-                    return;
-                }
-
-                if(gameList[x + 1][y + 1]!=0){
-                    if(_tempCount == 3){
-                        var _dangerPoint = {
-                            x:x-3,
-                            y:y-3,
-                            weight:_tempCount*10
-                        }
-                        console.log("左上方有空位需防守（四连）");
-                        window.killPosition.push(_dangerPoint);
-                    }
-                }
-
-                this.getRightBottomWeight(gameList, x + 1, y + 1, turn, _tempCount + 1);
-            }
-        }
+        return computePatternScoreAt(gameList, parseInt(x, 10), parseInt(y, 10), turn);
     },
 
     // 检测威胁点
