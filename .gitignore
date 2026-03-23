@@ -1,4 +1,6 @@
 /node_modules
+# 训练 API 落盘数据（保留 data/.gitkeep）
+/data/ai-training.json
 /jsconfig.json
 /dist
 /.vscode

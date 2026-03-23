@@ -8,13 +8,17 @@
     "url": ""
   },
   "scripts": {
-    "start": "gulp default"
+    "start": "gulp default",
+    "server": "node server/index.js"
   },
   "author": {
     "name": "Sangliang",
     "email": "378305868@qq.com"
   },
   "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2"
+  },
   "devDependencies": {
     "chokidar": "^3.5.3",
     "gulp": "^5.0.0",
