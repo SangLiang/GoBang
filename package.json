@@ -11,6 +11,8 @@
     "start": "gulp default",
     "server": "node server/index.js",
     "selftest:board": "node scripts/selftest-board.js",
+    "selftest:playout": "node scripts/selftest-playout.js",
+    "verify:nn-lambda": "node scripts/verify-nn-lambda-effect.js",
     "evolve": "node scripts/evolve-ai.js",
     "benchmark:ruleai": "node scripts/benchmark-ruleai.js"
   },
