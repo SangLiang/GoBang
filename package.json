@@ -9,7 +9,10 @@
   },
   "scripts": {
     "start": "gulp default",
-    "server": "node server/index.js"
+    "server": "node server/index.js",
+    "selftest:board": "node scripts/selftest-board.js",
+    "evolve": "node scripts/evolve-ai.js",
+    "benchmark:ruleai": "node scripts/benchmark-ruleai.js"
   },
   "author": {
     "name": "Sangliang",
