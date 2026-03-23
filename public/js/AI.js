@@ -4,6 +4,8 @@ var util = require("./util");
 var gameLogic = require("./gameLogic");
 var UI = require("./UI");
 var trainingApi = require("./trainingApi");
+var nnAssist = require("./nnAssist");
+var nnFeatures = require("./nnFeatures");
 
 function AI() {
     var self = this;
@@ -38,35 +40,69 @@ AI.prototype = {
 
         if (window.needComputePlace.length > 0) {
 
-            var _turn = null;
+            var nnEnabled = typeof NN_ASSIST_ENABLED !== "undefined" && NN_ASSIST_ENABLED;
+            var nnLambda = typeof NN_LAMBDA === "number" ? NN_LAMBDA : 0;
+            var useNnAssist = nnEnabled && nnLambda !== 0;
 
+            var _turnAttack = null;
             if (window.gameTurn == 0) {
-                _turn = 1;
+                _turnAttack = 1;
             } else if (window.gameTurn == 1) {
-                _turn = 2;
-            }
-            for (var i = 0; i < window.needComputePlace.length; i++) {
-                var score = gameLogic.getTheGameWeight(gameList, window.needComputePlace[i].x, window.needComputePlace[i].y, _turn);
-                var _o = {};
-                _o.x = window.needComputePlace[i].x;
-                _o.y = window.needComputePlace[i].y;
-                _o.weight = score;
-                _win_weight_list.push(_o);
+                _turnAttack = 2;
             }
 
+            var _turnDefense = null;
             if (window.gameTurn == 0) {
-                _turn = 2;
+                _turnDefense = 2;
             } else if (window.gameTurn == 1) {
-                _turn = 1;
+                _turnDefense = 1;
             }
 
-            for (var i = 0; i < window.needComputePlace.length; i++) {
-                var score = gameLogic.getTheGameWeight(gameList, window.needComputePlace[i].x, window.needComputePlace[i].y, _turn);
-                var _o = {};
-                _o.x = window.needComputePlace[i].x;
-                _o.y = window.needComputePlace[i].y;
-                _o.weight = score;
-                _danger_weight_list.push(_o);
+            var candLen = window.needComputePlace.length;
+            var stonesOnBoard = trainingApi.countStones(gameList);
+
+            if (useNnAssist) {
+                for (var i = 0; i < candLen; i++) {
+                    var cx = window.needComputePlace[i].x;
+                    var cy = window.needComputePlace[i].y;
+                    var attackScore = gameLogic.getTheGameWeight(gameList, cx, cy, _turnAttack);
+                    var defenseScore = gameLogic.getTheGameWeight(gameList, cx, cy, _turnDefense);
+                    var feat = nnFeatures.buildFeatures(gameList, cx, cy, {
+                        "attackScore": attackScore,
+                        "defenseScore": defenseScore,
+                        "candidateCount": candLen,
+                        "stonesOnBoard": stonesOnBoard
+                    });
+                    var assist = nnAssist.computeAssist(feat);
+                    var bump = nnLambda * assist;
+                    var _ow = {};
+                    _ow.x = cx;
+                    _ow.y = cy;
+                    _ow.weight = attackScore + bump;
+                    _win_weight_list.push(_ow);
+                    var _od = {};
+                    _od.x = cx;
+                    _od.y = cy;
+                    _od.weight = defenseScore + bump;
+                    _danger_weight_list.push(_od);
+                }
+            } else {
+                for (var j = 0; j < candLen; j++) {
+                    var scoreWin = gameLogic.getTheGameWeight(gameList, window.needComputePlace[j].x, window.needComputePlace[j].y, _turnAttack);
+                    var _oWin = {};
+                    _oWin.x = window.needComputePlace[j].x;
+                    _oWin.y = window.needComputePlace[j].y;
+                    _oWin.weight = scoreWin;
+                    _win_weight_list.push(_oWin);
+                }
+                for (var k = 0; k < candLen; k++) {
+                    var scoreDanger = gameLogic.getTheGameWeight(gameList, window.needComputePlace[k].x, window.needComputePlace[k].y, _turnDefense);
+                    var _oD = {};
+                    _oD.x = window.needComputePlace[k].x;
+                    _oD.y = window.needComputePlace[k].y;
+                    _oD.weight = scoreDanger;
+                    _danger_weight_list.push(_oD);
+                }
             }
             // console.log("进攻");
             // console.log(_win_weight_list);

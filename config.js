@@ -3,6 +3,10 @@
  * When game init , the resource which define in Res will load first
  */
 
+/** 神经辅助：默认关闭；开启且 λ≠0 时才会调用 NN（见 public/js/AI.js） */
+var NN_ASSIST_ENABLED = true;
+var NN_LAMBDA = 0.08;
+
 var Res = {
     "images": [
         //---UI
