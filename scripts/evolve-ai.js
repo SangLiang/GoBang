@@ -15,13 +15,14 @@
 "use strict";
 
 var fs = require("fs");
-var path = require("path");
 var http = require("http");
 
+var path = require("path");
 var Neuroevolution = require("./vendor/Neuroevolution");
 var ruleAi = require("./ruleAi");
 var playout = require("./playout");
 var nnAssistPick = require("./nnAssistPick");
+var nnFeatures = require(path.join(__dirname, "..", "public", "js", "nnFeatures.js"));
 
 var POPULATION = parseInt(process.env.POPULATION || "12", 10);
 var GENERATIONS = parseInt(process.env.GENERATIONS || "5", 10);
@@ -49,10 +50,6 @@ var FITNESS_OPTS = {
 	drawFitness: DRAW_FITNESS,
 	winSpeedBonus: WIN_SPEED_BONUS
 };
-
-var FEATURE_IN = 6;
-var HIDDEN = [4];
-var OUT = 1;
 
 function evaluateNetworkClean(net) {
 	var pickNn = nnAssistPick.makePicker(net, LAMBDA);
@@ -145,7 +142,7 @@ function postTrainingJson(port, payload, callback) {
 
 function main() {
 	var ne = new Neuroevolution({
-		network: [FEATURE_IN, HIDDEN, OUT],
+		network: [nnFeatures.FEATURE_DIM, nnFeatures.NN_ASSIST_HIDDEN, 1],
 		population: POPULATION,
 		elitism: 0.2,
 		randomBehaviour: 0.1,

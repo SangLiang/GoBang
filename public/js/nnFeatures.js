@@ -9,9 +9,14 @@
  * 3    | defenseNorm：防守向 pattern 分 / SCORE_SCALE
  * 4    | candCountNorm：候选点数 / 50，裁剪到 [0,1]
  * 5    | moveProgress：盘上已下子数 / 225
+ *
+ * 网络形状（与 nnAssist / evolve-ai 共用；变更须 bump nnAssistSchemaVersion）：
+ *   Neuroevolution network: [FEATURE_DIM, NN_ASSIST_HIDDEN, 1]
  */
 
 var FEATURE_DIM = 6;
+/** 单层隐藏层宽度；`network: [FEATURE_DIM, [width], 1]` */
+var NN_ASSIST_HIDDEN = [4];
 var SCORE_SCALE = 1e6;
 var MAX_CAND = 50;
 var BOARD_CELLS = 225;
@@ -65,5 +70,6 @@ function buildFeatures(gameList, x, y, context) {
 
 module.exports = {
 	FEATURE_DIM: FEATURE_DIM,
+	NN_ASSIST_HIDDEN: NN_ASSIST_HIDDEN,
 	buildFeatures: buildFeatures
 };

@@ -51,6 +51,14 @@ node scripts/evolve-ai.js
 - 在 **`data/evolved-<时间戳>.json`** 写入最优 `nnAssistWeights` 与 `nnAssistSchemaVersion: 1`。
 - 将其中字段合并进 **`data/ai-training.json` 根级**（与 `records` 并列），并启动 `npm run server`，前端在 NN 开启且 λ≠0 时会在单人开局 `GET /api/training` 加载。
 
+### 浏览器联调（计划 M3-T5-a）
+
+1. 终端 A：`npm run server`（3847）。终端 B：`npm start`（5000），用 **http://localhost:5000** 打开游戏（勿用 `file://`）。
+2. 在根目录 **`config.js`** 中设 **`NN_ASSIST_ENABLED: true`**、**`NN_LAMBDA`** 为 **0.05～0.12** 等非零值（与进化时 `NN_LAMBDA` 接近更易观察）。
+3. 将 `data/evolved-*.json` 里的 **`nnAssistSchemaVersion`**、**`nnAssistWeights`** 合并进 **`data/ai-training.json` 根对象**（与 `records` 并列；勿破坏 `records` 数组）。若暂无进化文件，可先只开 λ 看随机初始网与 λ=0 的差异。
+4. 单人开局后 F12 → **Network** 应出现对 **`127.0.0.1:3847/api/training`** 的 GET；落子风格与「同配置但删除权重字段、仅靠默认随机网」相比应有可感知差别即算通过（不要求变强）。
+5. 辅助：`npm run verify:nn-lambda` 仅在 Node 侧证明 λ 混合会改选点，**不能替代**本段浏览器步骤。
+
 ## 慎用：POST 覆盖
 
 若设置 **`EVOLVE_POST_PORT=3847`**，脚本会向 `POST /api/training` 提交 JSON，**整文件覆盖** `ai-training.json`（会丢失原有 `records`）。一般优先用手写合并或只使用 `evolved-*.json`。

@@ -11,12 +11,11 @@ var trainingApi = require("./trainingApi");
 
 /** 与训练文件里 nnAssistSchemaVersion 对齐；变更网络结构时 bump */
 var NN_ASSIST_SCHEMA_VERSION = 1;
-var HIDDEN_SIZE = 4;
 
 var assistNetwork = null;
 
 function validateSaveShape(save) {
-	var exp = [nnFeatures.FEATURE_DIM, HIDDEN_SIZE, 1];
+	var exp = [nnFeatures.FEATURE_DIM, nnFeatures.NN_ASSIST_HIDDEN[0], 1];
 	if (!save || !Array.isArray(save.neurons) || save.neurons.length !== exp.length) {
 		return false;
 	}
@@ -66,7 +65,7 @@ function ensureNetwork() {
 		return assistNetwork;
 	}
 	var ne = new Neuroevolution({
-		network: [nnFeatures.FEATURE_DIM, [4], 1],
+		network: [nnFeatures.FEATURE_DIM, nnFeatures.NN_ASSIST_HIDDEN, 1],
 		population: 1,
 		elitism: 1,
 		randomBehaviour: 0,

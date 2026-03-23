@@ -5,10 +5,12 @@
 
 "use strict";
 
+var path = require("path");
 var boardCore = require("./boardCore");
 var ruleAi = require("./ruleAi");
 var nnAssistPick = require("./nnAssistPick");
 var Neuroevolution = require("./vendor/Neuroevolution");
+var nnFeatures = require(path.join(__dirname, "..", "public", "js", "nnFeatures.js"));
 
 var LAMBDA = parseFloat(process.env.VERIFY_NN_LAMBDA || "0.12");
 if (isNaN(LAMBDA)) {
@@ -43,7 +45,7 @@ function randomOpeningBoard() {
 
 function main() {
 	var ne = new Neuroevolution({
-		network: [6, [4], 1],
+		network: [nnFeatures.FEATURE_DIM, nnFeatures.NN_ASSIST_HIDDEN, 1],
 		population: 1,
 		elitism: 1,
 		randomBehaviour: 0,

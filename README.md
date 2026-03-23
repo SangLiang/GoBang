@@ -1,6 +1,7 @@
 # GoBang
 
-Hamster.js 五子棋（含训练 API、Node 离线进化脚本）。
+Hamster.js 五子棋（含训练 API、Node 离线进化脚本）。  
+分步计划与验收项见 [`docs/神经进化功能实现计划.md`](docs/神经进化功能实现计划.md)；训练 API 细节见 [`server/README.md`](server/README.md)。
 
 ## npm 脚本说明
 
@@ -11,5 +12,7 @@ Hamster.js 五子棋（含训练 API、Node 离线进化脚本）。
 | **`npm run selftest:board`** | 运行 `scripts/selftest-board.js`：棋盘核心（`boardCore`）冒烟测试——五连判定、随机合法对局、双 `ruleAi` 对弈不落子非法。 |
 | **`npm run evolve`** | 运行 `scripts/evolve-ai.js`：在 Node 里用神经进化优化 NN 辅助网，对局基线对手为 `ruleAi`；结果写入 **`data/evolved-<时间戳>.json`**。环境变量、适应度含义、与 `ai-training.json` 合并方式见 [`scripts/README-evolve.md`](scripts/README-evolve.md)。 |
 | **`npm run benchmark:ruleai`** | 运行 `scripts/benchmark-ruleai.js`：默认 **100 盘** `ruleAi` 自对弈，统计平均手数，用于确认脚本侧规则 AI 无死循环（基线常下满 225 手）。可用 `BENCHMARK_GAMES` 改盘数。 |
+| **`npm run selftest:playout`** | 验收 `scripts/playout.js`：默认适应度胜/负/和与 `playOneGame(ruleAi, ruleAi)`。 |
+| **`npm run verify:nn-lambda`** | Node 侧抽检：`λ>0` 时 `nnAssistPick` 与纯 `ruleAi` 选点可不同（见计划 M3-T5-a′）。 |
 
 开发时常见组合：终端 A `npm run server`，终端 B `npm start`；改完前端执行 `npx gulp brow`（若未开 `gulp default` 的 watch）。
