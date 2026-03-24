@@ -12,6 +12,7 @@ var path = require("path");
 var PORT = parseInt(process.env.TRAINING_API_PORT || "3847", 10);
 var DATA_DIR = path.join(__dirname, "..", "data");
 var TRAINING_FILE = path.join(DATA_DIR, "ai-training.json");
+var DEBUG_LOG_FILE = path.join(DATA_DIR, "log.log");
 
 function ensureDataDir() {
 	if (!fs.existsSync(DATA_DIR)) {
@@ -110,9 +111,32 @@ app.put("/api/training/append", function (req, res) {
 	}
 });
 
+/**
+ * PUT /api/log/append
+ * body: { entry: {...} } 将调试日志追加到 data/log.log（每行一条 JSON）。
+ */
+app.put("/api/log/append", function (req, res) {
+	ensureDataDir();
+	var entry = req.body && req.body.entry;
+	if (entry === undefined) {
+		return res.status(400).json({ ok: false, error: "需要 JSON body: { entry: ... }" });
+	}
+	var lineObj = {
+		savedAt: new Date().toISOString(),
+		entry: entry
+	};
+	try {
+		fs.appendFileSync(DEBUG_LOG_FILE, JSON.stringify(lineObj) + "\n", "utf8");
+		res.json({ ok: true });
+	} catch (e) {
+		res.status(500).json({ ok: false, error: String(e.message) });
+	}
+});
+
 app.listen(PORT, function () {
 	console.log("[GoBang training API] http://127.0.0.1:" + PORT);
 	console.log("  GET  /api/training        读取 data/ai-training.json");
 	console.log("  POST /api/training        覆盖保存（整块 JSON）");
 	console.log("  PUT  /api/training/append 追加一条到 records[]");
+	console.log("  PUT  /api/log/append      追加一条到 data/log.log");
 });
