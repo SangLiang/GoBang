@@ -1,7 +1,7 @@
 ﻿# GoBang
 
 Hamster.js 五子棋（含训练 API、Node 离线进化脚本）。  
-分步计划与验收项见 [`docs/神经进化功能实现计划.md`](docs/神经进化功能实现计划.md)；训练 API 细节见 [`server/README.md`](server/README.md)。
+训练 API 细节见 [`server/README.md`](server/README.md)。
 
 ## npm 脚本说明
 
