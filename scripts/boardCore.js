@@ -60,11 +60,23 @@ function virtualCell(gameList, cx, cy, mx, my, player) {
 	return gameList[cx][cy];
 }
 
+/**
+ * 扫描某个方向上的连子情况（基于虚拟落子）。
+ * @param {number[][]} gameList 棋盘二维数组，0 表示空位。
+ * @param {number} mx 候选落子 x 坐标。
+ * @param {number} my 候选落子 y 坐标。
+ * @param {number} dx 扫描方向 x 步进（如 1、0、-1）。
+ * @param {number} dy 扫描方向 y 步进（如 1、0、-1）。
+ * @param {number} player 当前评估的玩家标识。
+ * @returns {{total: number, leftOpen: boolean, rightOpen: boolean}} 连子总数与两端开口状态。
+ */
 function scanConnectedLine(gameList, mx, my, dx, dy, player) {
+	// 从候选点反方向开始，统计连续同色棋子数量（left）
 	var left = 0;
 	var cx = mx - dx;
 	var cy = my - dy;
 	while (cx >= 0 && cy >= 0 && cx <= 14 && cy <= 14) {
+		// virtualCell 会把 (mx,my) 视为 player 的“虚拟落子”
 		if (virtualCell(gameList, cx, cy, mx, my, player) !== player) {
 			break;
 		}
@@ -72,9 +84,11 @@ function scanConnectedLine(gameList, mx, my, dx, dy, player) {
 		cx -= dx;
 		cy -= dy;
 	}
+	// 记录 left 方向上第一个非连续点（用于判断是否开口）
 	var lx = cx;
 	var ly = cy;
 
+	// 从候选点正方向开始，统计连续同色棋子数量（right）
 	var right = 0;
 	cx = mx + dx;
 	cy = my + dy;
@@ -86,10 +100,13 @@ function scanConnectedLine(gameList, mx, my, dx, dy, player) {
 		cx += dx;
 		cy += dy;
 	}
+	// 记录 right 方向上第一个非连续点（用于判断是否开口）
 	var rx = cx;
 	var ry = cy;
 
+	// total 包含虚拟落子自身：1 + 左连续 + 右连续
 	var total = 1 + left + right;
+	// 两端开口条件：坐标仍在棋盘内，且该位置为空
 	var leftOpen = (lx >= 0 && ly >= 0 && lx <= 14 && ly <= 14 && gameList[lx][ly] === 0);
 	var rightOpen = (rx >= 0 && ry >= 0 && rx <= 14 && ry <= 14 && gameList[rx][ry] === 0);
 
@@ -100,10 +117,22 @@ function scanConnectedLine(gameList, mx, my, dx, dy, player) {
 	};
 }
 
+/**
+ * 根据连子长度与两端开口情况，返回线型分值与类型。
+ * @param {number} total 该方向上的连子总数（含虚拟落子）。
+ * @param {boolean} leftOpen 左端是否开口。
+ * @param {boolean} rightOpen 右端是否开口。
+ * @returns {{score: number, kind: string}} 评分结果（分值 + 线型标签）。
+ */
 function linePatternScore(total, leftOpen, rightOpen) {
+	// 成五（或超过五）直接给最高分
 	if (total >= 5) {
 		return { score: 1000000, kind: "FIVE" };
 	}
+	// 四连：按两端开口数区分
+	// - OPEN4（活四）：两端都空（2 个成五点），威胁最高
+	// - RUSH4（冲四）：仅一端空（1 个成五点），威胁次之
+	// - DEAD4（死四）：两端都堵（0 个成五点），实际威胁较低
 	if (total === 4) {
 		if (leftOpen && rightOpen) {
 			return { score: 120000, kind: "OPEN4" };
@@ -113,6 +142,7 @@ function linePatternScore(total, leftOpen, rightOpen) {
 		}
 		return { score: 220, kind: "DEAD4" };
 	}
+	// 三连：区分活三、眠三、死三
 	if (total === 3) {
 		if (leftOpen && rightOpen) {
 			return { score: 2800, kind: "OPEN3" };
@@ -122,6 +152,7 @@ function linePatternScore(total, leftOpen, rightOpen) {
 		}
 		return { score: 120, kind: "DEAD3" };
 	}
+	// 二连：区分活二、眠二、死二
 	if (total === 2) {
 		if (leftOpen && rightOpen) {
 			return { score: 180, kind: "OPEN2" };
@@ -131,6 +162,7 @@ function linePatternScore(total, leftOpen, rightOpen) {
 		}
 		return { score: 15, kind: "DEAD2" };
 	}
+	// 单子：根据开口数给基础分
 	if (leftOpen && rightOpen) {
 		return { score: 35, kind: "OPEN1" };
 	}
@@ -141,10 +173,13 @@ function linePatternScore(total, leftOpen, rightOpen) {
 }
 
 function getPatternScoreAt(gameList, mx, my, player) {
+	// 该位置已有棋子时，不能落子，分值记为 0
 	if (gameList[mx][my] !== 0) {
 		return 0;
 	}
+	// 四个主方向：横、竖、主对角、副对角
 	var dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+	// 累积分值，以及用于组合加分的形态计数
 	var sum = 0;
 	var open3Count = 0;
 	var rush4Count = 0;
@@ -155,7 +190,9 @@ function getPatternScoreAt(gameList, mx, my, player) {
 
 	for (i = 0; i < dirs.length; i++) {
 		d = dirs[i];
+		// 在当前方向上扫描连子与两端是否开口
 		scan = scanConnectedLine(gameList, mx, my, d[0], d[1], player);
+		// 将线形转换为对应分值与形态类型
 		r = linePatternScore(scan.total, scan.leftOpen, scan.rightOpen);
 		sum += r.score;
 		if (r.kind === "OPEN3") {
@@ -165,9 +202,11 @@ function getPatternScoreAt(gameList, mx, my, player) {
 			rush4Count++;
 		}
 	}
+	// 双活三：在基础分上追加组合奖励
 	if (open3Count >= 2) {
 		sum += 12000;
 	}
+	// 双冲四：在基础分上追加更高组合奖励
 	if (rush4Count >= 2) {
 		sum += 80000;
 	}
