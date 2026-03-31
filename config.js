@@ -8,15 +8,20 @@
  *
  * NN_ASSIST_ENABLED — 总开关。为 false 时不走 NN 分支，与纯规则 AI 一致。
  *
- * NN_LAMBDA — 混合系数 λ（标量），不是神经网络的突触权重。
- *   选点公式：总分 = pattern 分（getTheGameWeight）+ λ × assist（NN 输出）。
- *   λ=0 时不调用 computeAssist；在当前实现量级下常用试值约 50～150（建议从 80 起步）。
+ * NN_ASSIST_SCHEMA_VERSION — 推理版本：
+ *   1 = v1（规则分 + assist 混合）
+ *   2 = v2（22维特征，NN 独立评分）
+ *
+ * NN_LAMBDA — 分数放大系数 λ（标量）。
+ *   v1: 总分 = pattern 分 + λ * assist
+ *   v2: 总分 = λ * score（NN 直接评分）
  *
  * 真正的网络权重：由 nnAssist 内随机初始化，或训练服务 data/ai-training.json 根级的
  * nnAssistWeights + nnAssistSchemaVersion（GET /api/training 加载，见 server/README.md）。
  */
 var NN_ASSIST_ENABLED = true;
-var NN_LAMBDA = 80;
+var NN_ASSIST_SCHEMA_VERSION = 2;
+var NN_LAMBDA = 1000;
 
 var Res = {
     "images": [

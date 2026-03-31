@@ -94,15 +94,17 @@ module.exports.start = function () {
         
         // 如果游戏结束，显示获胜方
         if (window.result) {
-            var winner = gameTurn == 0 ? 1 : 0; // 当前回合是获胜方的下一个，所以需要反过来
+            // 这里还未切换回合，gameTurn 就是刚刚落子并获胜的一方。
+            var winner = gameTurn;
+            var nnSchemaVersion = typeof NN_ASSIST_SCHEMA_VERSION === "number" ? NN_ASSIST_SCHEMA_VERSION : 1;
             if (!window.hasLoggedSingleResult) {
                 window.hasLoggedSingleResult = true;
                 trainingApi.appendTrainingLog({
                     "mode": "single",
                     "result": "win-user",
-                    "winnerSide": "black",
+                    "winnerSide": gameTurn == 0 ? "black" : "white",
                     "moves": trainingApi.countStones(gameList),
-                    "schemaVersion": 1,
+                    "schemaVersion": nnSchemaVersion,
                     "ts": new Date().toISOString()
                 });
             }

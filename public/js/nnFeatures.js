@@ -1,25 +1,22 @@
 /**
- * 五子棋 NN 辅助特征 v1（顺序固定，变更须 bump schemaVersion）
- *
- * 索引 | 含义
- * -----|--------------------------------------------------
- * 0    | nx：归一化列坐标 (x - 7) / 7
- * 1    | ny：归一化行坐标 (y - 7) / 7
- * 2    | attackNorm：进攻向 pattern 分 / SCORE_SCALE（裁剪约 [-1,1]）
- * 3    | defenseNorm：防守向 pattern 分 / SCORE_SCALE
- * 4    | candCountNorm：候选点数 / 50，裁剪到 [0,1]
- * 5    | moveProgress：盘上已下子数 / 225
- *
- * 网络形状（与 nnAssist / evolve-ai 共用；变更须 bump nnAssistSchemaVersion）：
- *   Neuroevolution network: [FEATURE_DIM, NN_ASSIST_HIDDEN, 1]
+ * 特征模块支持 v1 / v2 两套方案：
+ * - v1：6 维规则辅助特征（保持兼容）
+ * - v2：22 维局部棋盘特征（独立决策）
  */
 
-var FEATURE_DIM = 6;
-/** 单层隐藏层宽度；`network: [FEATURE_DIM, [width], 1]` */
-var NN_ASSIST_HIDDEN = [4];
+var FEATURE_DIM_V1 = 6;
+var NN_ASSIST_HIDDEN_V1 = [4];
+var FEATURE_DIM_V2 = 22;
+var NN_ASSIST_HIDDEN_V2 = [32];
+
+// 默认导出的维度/网络保持 v1，避免影响现有 S 模式。
+var FEATURE_DIM = FEATURE_DIM_V1;
+var NN_ASSIST_HIDDEN = NN_ASSIST_HIDDEN_V1;
+
 var SCORE_SCALE = 1e6;
 var MAX_CAND = 50;
 var BOARD_CELLS = 225;
+var BOARD_SIZE = 15;
 
 function clamp(v, lo, hi) {
 	if (v < lo) return lo;
@@ -39,13 +36,15 @@ function countStonesOnBoard(gameList) {
 	return count;
 }
 
+function inBoard(x, y) {
+	return x >= 0 && y >= 0 && x < BOARD_SIZE && y < BOARD_SIZE;
+}
+
 /**
- * @param {Array} gameList 15×15
- * @param {number} x
- * @param {number} y
- * @param {object} context attackScore, defenseScore, candidateCount, stonesOnBoard（可选，缺省则从 gameList 统计子数）
+ * v1 特征（兼容旧逻辑）
  */
-function buildFeatures(gameList, x, y, context) {
+function buildFeaturesV1(gameList, x, y, context) {
+	context = context || {};
 	var attackScore = context.attackScore;
 	var defenseScore = context.defenseScore;
 	var candidateCount = context.candidateCount;
@@ -62,14 +61,143 @@ function buildFeatures(gameList, x, y, context) {
 	var moveProgress = clamp(stonesOnBoard / BOARD_CELLS, 0, 1);
 
 	var out = [nx, ny, attackNorm, defenseNorm, candCountNorm, moveProgress];
-	if (out.length !== FEATURE_DIM) {
-		throw new Error("nnFeatures dim");
+	if (out.length !== FEATURE_DIM_V1) {
+		throw new Error("nnFeatures v1 dim");
 	}
 	return out;
+}
+
+function scanOneSide(board, mx, my, dx, dy, stone) {
+	var count = 0;
+	var cx = mx + dx;
+	var cy = my + dy;
+	while (inBoard(cx, cy) && board[cx][cy] === stone) {
+		count++;
+		cx += dx;
+		cy += dy;
+	}
+	return {
+		count: count,
+		endX: cx,
+		endY: cy
+	};
+}
+
+function hasGapOnSide(board, startX, startY, dx, dy, stone) {
+	if (!inBoard(startX, startY) || board[startX][startY] !== 0) {
+		return 0;
+	}
+	var bx = startX + dx;
+	var by = startY + dy;
+	if (inBoard(bx, by) && board[bx][by] === stone) {
+		return 1;
+	}
+	return 0;
+}
+
+/**
+ * v2：扫描单方向线特征。
+ * 返回：myCount/myGap/oppCount/oppGap/openSides（均为未归一化值）。
+ */
+function scanDirectionLine(board, mx, my, dx, dy, player) {
+	var opponent = player === 1 ? 2 : 1;
+
+	var myLeft = scanOneSide(board, mx, my, -dx, -dy, player);
+	var myRight = scanOneSide(board, mx, my, dx, dy, player);
+	var myCount = Math.min(1 + myLeft.count + myRight.count, 4);
+
+	var myGap = hasGapOnSide(board, myLeft.endX, myLeft.endY, -dx, -dy, player);
+	if (!myGap) {
+		myGap = hasGapOnSide(board, myRight.endX, myRight.endY, dx, dy, player);
+	}
+
+	var oppLeft = scanOneSide(board, mx, my, -dx, -dy, opponent);
+	var oppRight = scanOneSide(board, mx, my, dx, dy, opponent);
+	var oppCount = Math.min(oppLeft.count + oppRight.count, 4);
+
+	var oppGap = hasGapOnSide(board, oppLeft.endX, oppLeft.endY, -dx, -dy, opponent);
+	if (!oppGap) {
+		oppGap = hasGapOnSide(board, oppRight.endX, oppRight.endY, dx, dy, opponent);
+	}
+
+	var openSides = 0;
+	var cx = myLeft.endX;
+	var cy = myLeft.endY;
+	while (inBoard(cx, cy) && board[cx][cy] === 0 && openSides < 5) {
+		openSides++;
+		cx -= dx;
+		cy -= dy;
+	}
+	cx = myRight.endX;
+	cy = myRight.endY;
+	while (inBoard(cx, cy) && board[cx][cy] === 0 && openSides < 5) {
+		openSides++;
+		cx += dx;
+		cy += dy;
+	}
+
+	return {
+		myCount: myCount,
+		myGap: myGap,
+		oppCount: oppCount,
+		oppGap: oppGap,
+		openSides: Math.min(openSides, 5)
+	};
+}
+
+/**
+ * v2：22 维局部特征。
+ * @param {number[][]} gameList
+ * @param {number} x
+ * @param {number} y
+ * @param {number} player 1|2，按评估方视角
+ * @param {object} context stonesOnBoard/isMyTurn（可选）
+ */
+function buildFeaturesV2(gameList, x, y, player, context) {
+	context = context || {};
+	var stonesOnBoard = context.stonesOnBoard;
+	var isMyTurn = context.isMyTurn;
+	if (stonesOnBoard === undefined || stonesOnBoard === null) {
+		stonesOnBoard = countStonesOnBoard(gameList);
+	}
+	if (isMyTurn === undefined || isMyTurn === null) {
+		isMyTurn = 1;
+	}
+
+	var out = [isMyTurn ? 1 : 0, clamp(stonesOnBoard / BOARD_CELLS, 0, 1)];
+	var dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+	for (var i = 0; i < dirs.length; i++) {
+		var d = dirs[i];
+		var f = scanDirectionLine(gameList, x, y, d[0], d[1], player);
+		out.push(clamp(f.myCount / 4, 0, 1));
+		out.push(f.myGap ? 1 : 0);
+		out.push(clamp(f.oppCount / 4, 0, 1));
+		out.push(f.oppGap ? 1 : 0);
+		out.push(clamp(f.openSides / 5, 0, 1));
+	}
+	if (out.length !== FEATURE_DIM_V2) {
+		throw new Error("nnFeatures v2 dim");
+	}
+	return out;
+}
+
+/**
+ * 默认接口保持 v1，避免影响现有逻辑。
+ */
+function buildFeatures(gameList, x, y, context) {
+	return buildFeaturesV1(gameList, x, y, context);
 }
 
 module.exports = {
 	FEATURE_DIM: FEATURE_DIM,
 	NN_ASSIST_HIDDEN: NN_ASSIST_HIDDEN,
-	buildFeatures: buildFeatures
+	FEATURE_DIM_V1: FEATURE_DIM_V1,
+	NN_ASSIST_HIDDEN_V1: NN_ASSIST_HIDDEN_V1,
+	FEATURE_DIM_V2: FEATURE_DIM_V2,
+	NN_ASSIST_HIDDEN_V2: NN_ASSIST_HIDDEN_V2,
+	buildFeatures: buildFeatures,
+	buildFeaturesV1: buildFeaturesV1,
+	buildFeaturesV2: buildFeaturesV2,
+	scanDirectionLine: scanDirectionLine,
+	countStonesOnBoard: countStonesOnBoard
 };

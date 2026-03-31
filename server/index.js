@@ -95,8 +95,30 @@ app.put("/api/training/append", function (req, res) {
 	if (fs.existsSync(TRAINING_FILE)) {
 		try {
 			store = JSON.parse(fs.readFileSync(TRAINING_FILE, "utf8"));
+			if (!store || typeof store !== "object" || Array.isArray(store)) {
+				store = { records: [] };
+			}
 			if (!Array.isArray(store.records)) {
-				store = { records: [store] };
+				store.records = [];
+			}
+			// 兼容历史文件：若权重被写进 records[]，自动提升到根级字段，避免前端加载不到模型。
+			if (store.nnAssistSchemaVersion === undefined || store.nnAssistWeights === undefined) {
+				for (var i = 0; i < store.records.length; i++) {
+					var item = store.records[i];
+					if (!item) {
+						continue;
+					}
+					if ((item.nnAssistSchemaVersion === 1 || item.nnAssistSchemaVersion === 2) && item.nnAssistWeights) {
+						store.nnAssistSchemaVersion = item.nnAssistSchemaVersion;
+						store.nnAssistWeights = item.nnAssistWeights;
+						if (item.evolvedAt) store.evolvedAt = item.evolvedAt;
+						if (item.bestFitness !== undefined) store.bestFitness = item.bestFitness;
+						if (item.bestFitnessNote !== undefined) store.bestFitnessNote = item.bestFitnessNote;
+						if (item.generations !== undefined) store.generations = item.generations;
+						if (item.population !== undefined) store.population = item.population;
+						break;
+					}
+				}
 			}
 		} catch (e) {
 			store = { records: [] };

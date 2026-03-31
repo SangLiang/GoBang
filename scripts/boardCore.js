@@ -352,6 +352,196 @@ function countStones(gameList) {
 	return c;
 }
 
+/**
+ * 判断坐标是否在棋盘范围内。
+ * 棋盘固定为 15x15，合法索引区间为 [0, 14]。
+ *
+ * @param {number} x 横坐标（列）
+ * @param {number} y 纵坐标（行）
+ * @returns {boolean} true 表示坐标合法，false 表示越界
+ */
+function inBoard(x, y) {
+	return x >= 0 && y >= 0 && x < BOARD_SIZE && y < BOARD_SIZE;
+}
+
+/**
+ * 从候选点沿某一侧方向扫描“连续同色子”。
+ *
+ * 扫描起点不是 (mx,my) 本身，而是它相邻的一格 `(mx + dx, my + dy)`，
+ * 连续计数仅统计棋盘中已经存在的 stone，不包含候选点虚拟落子。
+ * 扫描在遇到以下任一条件时停止：
+ * 1) 越界
+ * 2) 当前位置不是 stone
+ *
+ * @param {number[][]} board 当前棋盘（0 空 / 1 黑 / 2 白）
+ * @param {number} mx 候选点 x
+ * @param {number} my 候选点 y
+ * @param {number} dx 扫描方向 x 步进（-1/0/1）
+ * @param {number} dy 扫描方向 y 步进（-1/0/1）
+ * @param {number} stone 目标棋子颜色（1 或 2）
+ * @returns {{count:number,endX:number,endY:number}}
+ *   - count: 连续同色子数量
+ *   - endX/endY: 停止位置（第一个不满足连续条件的位置，可用于后续 gap/open 计算）
+ */
+function scanOneSideForLocal(board, mx, my, dx, dy, stone) {
+	var count = 0;
+	var cx = mx + dx;
+	var cy = my + dy;
+	while (inBoard(cx, cy) && board[cx][cy] === stone) {
+		count++;
+		cx += dx;
+		cy += dy;
+	}
+	return {
+		count: count,
+		endX: cx,
+		endY: cy
+	};
+}
+
+/**
+ * 判断某一侧是否存在“跳空”形态（X _ X）。
+ *
+ * 规则：
+ * - startX/startY 应该是“连续段之后第一个格子”（通常来自 scanOneSideForLocal 的 endX/endY）
+ * - 该格必须为空（_）
+ * - 再向同方向跨一格必须是 stone（X）
+ * 满足则返回 1，否则返回 0。
+ *
+ * @param {number[][]} board 当前棋盘
+ * @param {number} startX 连续段外侧首格 x
+ * @param {number} startY 连续段外侧首格 y
+ * @param {number} dx 扫描方向 x 步进
+ * @param {number} dy 扫描方向 y 步进
+ * @param {number} stone 目标棋子颜色（1 或 2）
+ * @returns {0|1} 是否存在跳空
+ */
+function hasGapOnSideForLocal(board, startX, startY, dx, dy, stone) {
+	if (!inBoard(startX, startY) || board[startX][startY] !== 0) {
+		return 0;
+	}
+	var bx = startX + dx;
+	var by = startY + dy;
+	if (inBoard(bx, by) && board[bx][by] === stone) {
+		return 1;
+	}
+	return 0;
+}
+
+/**
+ * 计算单个方向上的 v2 局部特征（未归一化原值）。
+ *
+ * 特征含义：
+ * - myCount: 我方连续子数（含候选点虚拟落子，最大截断为 4）
+ * - myGap:   我方是否存在跳空（X _ X）
+ * - oppCount:对手连续子数（不含候选点，最大截断为 4）
+ * - oppGap:  对手是否存在跳空（X _ X）
+ * - openSides: 我方连续段外侧两端可延伸空位总数，最大截断为 5
+ *
+ * 说明：
+ * - “我方”连续数按“落在候选点后”视角计算，所以是 `1 + left + right`
+ * - “对手”连续数按当前盘面威胁计算，不做候选点虚拟落子
+ * - openSides 以我方连续段两端向外数空格，遇到边界或非空即停止
+ *
+ * @param {number[][]} board 当前棋盘
+ * @param {number} mx 候选点 x
+ * @param {number} my 候选点 y
+ * @param {number} dx 方向 x 步进
+ * @param {number} dy 方向 y 步进
+ * @param {number} player 当前评估方（1 或 2）
+ * @returns {{myCount:number,myGap:0|1,oppCount:number,oppGap:0|1,openSides:number}}
+ */
+function scanDirectionLocal(board, mx, my, dx, dy, player) {
+	var opponent = player === 1 ? 2 : 1;
+
+	var myLeft = scanOneSideForLocal(board, mx, my, -dx, -dy, player);
+	var myRight = scanOneSideForLocal(board, mx, my, dx, dy, player);
+	var myCount = Math.min(1 + myLeft.count + myRight.count, 4);
+
+	var myGap = hasGapOnSideForLocal(board, myLeft.endX, myLeft.endY, -dx, -dy, player);
+	if (!myGap) {
+		myGap = hasGapOnSideForLocal(board, myRight.endX, myRight.endY, dx, dy, player);
+	}
+
+	var oppLeft = scanOneSideForLocal(board, mx, my, -dx, -dy, opponent);
+	var oppRight = scanOneSideForLocal(board, mx, my, dx, dy, opponent);
+	var oppCount = Math.min(oppLeft.count + oppRight.count, 4);
+
+	var oppGap = hasGapOnSideForLocal(board, oppLeft.endX, oppLeft.endY, -dx, -dy, opponent);
+	if (!oppGap) {
+		oppGap = hasGapOnSideForLocal(board, oppRight.endX, oppRight.endY, dx, dy, opponent);
+	}
+
+	var openSides = 0;
+	var cx = myLeft.endX;
+	var cy = myLeft.endY;
+	while (inBoard(cx, cy) && board[cx][cy] === 0 && openSides < 5) {
+		openSides++;
+		cx -= dx;
+		cy -= dy;
+	}
+	cx = myRight.endX;
+	cy = myRight.endY;
+	while (inBoard(cx, cy) && board[cx][cy] === 0 && openSides < 5) {
+		openSides++;
+		cx += dx;
+		cy += dy;
+	}
+
+	return {
+		myCount: myCount,
+		myGap: myGap,
+		oppCount: oppCount,
+		oppGap: oppGap,
+		openSides: Math.min(openSides, 5)
+	};
+}
+
+/**
+ * 构建 Node 侧 v2 特征向量（22 维）。
+ *
+ * 维度布局：
+ * - 0: isMyTurn（当前固定写 1，用于与浏览器/训练端接口保持一致）
+ * - 1: progress = stonesOnBoard / 225，裁剪到 [0,1]
+ * - 2..21: 四个方向，每个方向 5 维：
+ *   [myCount/4, myGap, oppCount/4, oppGap, openSides/5]
+ *
+ * 方向顺序固定为：
+ * - [1, 0]   横向
+ * - [0, 1]   纵向
+ * - [1, 1]   主对角
+ * - [1, -1]  副对角
+ *
+ * 注意：
+ * - 顺序是协议的一部分，训练与推理两端必须一致
+ * - 所有输出都被归一化到 [0,1]
+ * - 本函数只负责“特征提取”，不做候选合法性判断
+ *
+ * @param {number[][]} gameList 当前棋盘
+ * @param {number} x 候选点 x
+ * @param {number} y 候选点 y
+ * @param {number} player 当前评估方（1 或 2）
+ * @param {number} [stonesOnBoard] 盘面已有落子数；未传时自动统计
+ * @returns {number[]} 22 维特征数组
+ */
+function buildLocalFeatures(gameList, x, y, player, stonesOnBoard) {
+	if (stonesOnBoard === undefined || stonesOnBoard === null) {
+		stonesOnBoard = countStones(gameList);
+	}
+	var features = [1, Math.max(0, Math.min(1, stonesOnBoard / 225))];
+	var dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+	for (var i = 0; i < dirs.length; i++) {
+		var d = dirs[i];
+		var f = scanDirectionLocal(gameList, x, y, d[0], d[1], player);
+		features.push(Math.max(0, Math.min(1, f.myCount / 4)));
+		features.push(f.myGap ? 1 : 0);
+		features.push(Math.max(0, Math.min(1, f.oppCount / 4)));
+		features.push(f.oppGap ? 1 : 0);
+		features.push(Math.max(0, Math.min(1, f.openSides / 5)));
+	}
+	return features;
+}
+
 module.exports = {
 	BOARD_SIZE: BOARD_SIZE,
 	createEmptyBoard: createEmptyBoard,
@@ -360,5 +550,6 @@ module.exports = {
 	checkWin: checkWin,
 	getLegalCandidates: getLegalCandidates,
 	getPatternScoreAt: getPatternScoreAt,
-	countStones: countStones
+	countStones: countStones,
+	buildLocalFeatures: buildLocalFeatures
 };

@@ -5,10 +5,15 @@
  *   POPULATION（默认 12）
  *   GENERATIONS（默认 5）
  *   GAMES_PER_INDIVIDUAL（默认 4）局数越多，均值越稳定、排序越不靠运气
- *   NN_LAMBDA（默认 80）评估时混合系数；应与 config.js 中 NN_LAMBDA 保持一致
+ *   NN_LAMBDA（默认 1000）评估时分数放大系数；应与 v2 配置保持一致
  *   DRAW_FITNESS（默认 -0.1）满盘和棋时的适应度
  *   WIN_SPEED_BONUS（默认 0.04）胜局越早结束额外奖励（上限）
  *   FITNESS_NOISE（默认 0.015）加在「场均 clean」上的噪声；宜明显小于常见胜-负差距，否则会淹没真实差异
+ *   EVOLVE_OPPONENT（默认 rule）对手模式：rule | self
+ *   EVOLVE_SEED_FILE（可选）从已有 evolved/ai-training JSON 读取权重作为续训种子
+ *   EVOLVE_ALLOW_SELF_NO_SEED（默认 0）self 模式无种子时是否允许冷启动（1=允许）
+ *   EVOLVE_SEED_RATIO（默认 0.5）首代中使用种子扰动初始化的占比（0~1）
+ *   EVOLVE_SEED_MUTATION_RANGE（默认 0.2）种子扰动幅度（每个权重加减该范围内随机值）
  *   EVOLVE_POST_PORT 若设置（如 3847）则向 http://127.0.0.1:PORT/api/training POST 最优权重（会覆盖整文件，慎用）
  */
 
@@ -36,19 +41,37 @@ var GENERATIONS = parseInt(process.env.GENERATIONS || "30", 10);
 
 /** 每个个体评估时的对局数：每套权重下多少盘棋
  *  越多均值越稳定、排序越不靠运气，但评估时间增加 */
-var GAMES = parseInt(process.env.GAMES_PER_INDIVIDUAL || "5", 10);
+var GAMES = parseInt(process.env.GAMES_PER_INDIVIDUAL || "6", 10);
 
-/** NN混合系数 lambda：assist分乘以此系数后与规则分相加
- *  lambda * assist 构成最终混合分；越大NN影响越强
- *  注意：应与 config.js 中的 NN_LAMBDA 保持一致，确保进化评估与实际使用场景匹配 */
-var LAMBDA = parseFloat(process.env.NN_LAMBDA || "80");
+/** v2 评分放大系数 lambda：weight = lambda * score */
+var LAMBDA = parseFloat(process.env.NN_LAMBDA || "1000");
 if (isNaN(LAMBDA)) {
-	LAMBDA = 80;
+	LAMBDA = 1500;
 }
 
 /** 训练服务端口：若设置则自动POST最优权重到该端口
  *  例如 3847 会 POST 到 http://127.0.0.1:3847/api/training */
 var POST_PORT = process.env.EVOLVE_POST_PORT;
+var OPPONENT_MODE = (process.env.EVOLVE_OPPONENT || "rule").toLowerCase();
+if (OPPONENT_MODE !== "rule" && OPPONENT_MODE !== "self") {
+	OPPONENT_MODE = "rule";
+}
+var SEED_FILE = process.env.EVOLVE_SEED_FILE || "";
+var ALLOW_SELF_NO_SEED = process.env.EVOLVE_ALLOW_SELF_NO_SEED === "1";
+var SEED_RATIO = parseFloat(process.env.EVOLVE_SEED_RATIO || "0.5");
+if (isNaN(SEED_RATIO)) {
+	SEED_RATIO = 0.5;
+}
+if (SEED_RATIO < 0) {
+	SEED_RATIO = 0;
+}
+if (SEED_RATIO > 1) {
+	SEED_RATIO = 1;
+}
+var SEED_MUT_RANGE = parseFloat(process.env.EVOLVE_SEED_MUTATION_RANGE || "0.2");
+if (isNaN(SEED_MUT_RANGE) || SEED_MUT_RANGE < 0) {
+	SEED_MUT_RANGE = 0.2;
+}
 
 // ===== 适应度计算参数 =====
 
@@ -78,8 +101,28 @@ var FITNESS_OPTS = {
 	winSpeedBonus: WIN_SPEED_BONUS
 };
 
-function evaluateNetworkClean(net) {
+function makeNetworkFromSave(save) {
+	var ne = new Neuroevolution({
+		network: [nnFeatures.FEATURE_DIM_V2, nnFeatures.NN_ASSIST_HIDDEN_V2, 1],
+		population: 1,
+		elitism: 1,
+		randomBehaviour: 0,
+		mutationRate: 0,
+		historic: 0
+	});
+	var n = ne.nextGeneration()[0];
+	if (save) {
+		n.setSave(save);
+	}
+	return n;
+}
+
+function evaluateNetworkClean(net, context) {
 	var pickNn = nnAssistPick.makePicker(net, LAMBDA);
+	var opponentPick = ruleAi.pickMove;
+	if (context && context.opponentMode === "self") {
+		opponentPick = context.selfOpponentPick;
+	}
 	var sum = 0;
 	var g;
 	var r;
@@ -88,17 +131,17 @@ function evaluateNetworkClean(net) {
 	for (g = 0; g < GAMES; g++) {
 		playingBlack = g % 2 === 0;
 		if (playingBlack) {
-			r = playout.playOneGame(pickNn, ruleAi.pickMove);
+			r = playout.playOneGame(pickNn, opponentPick);
 		} else {
-			r = playout.playOneGame(ruleAi.pickMove, pickNn);
+			r = playout.playOneGame(opponentPick, pickNn);
 		}
 		sum += playout.fitnessFromResult(r.winner, playingBlack, r.moves, FITNESS_OPTS);
 	}
 	return sum / GAMES;
 }
 
-function evaluateNetworkNoisy(net) {
-	var clean = evaluateNetworkClean(net);
+function evaluateNetworkNoisy(net, context) {
+	var clean = evaluateNetworkClean(net, context);
 	var noisy = clean + (Math.random() - 0.5) * FITNESS_NOISE;
 	return { clean: clean, noisy: noisy };
 }
@@ -167,12 +210,90 @@ function postTrainingJson(port, payload, callback) {
 	req.end();
 }
 
+function validateSeedSave(save) {
+	if (!save || !Array.isArray(save.neurons) || !Array.isArray(save.weights)) {
+		return false;
+	}
+	return save.neurons.length === 3 &&
+		save.neurons[0] === nnFeatures.FEATURE_DIM_V2 &&
+		save.neurons[1] === nnFeatures.NN_ASSIST_HIDDEN_V2[0] &&
+		save.neurons[2] === 1;
+}
+
+function resolveSeedSave(raw) {
+	if (!raw) {
+		return null;
+	}
+	if (raw.nnAssistWeights && validateSeedSave(raw.nnAssistWeights)) {
+		return raw.nnAssistWeights;
+	}
+	if (raw.nnAssistSchemaVersion === 2 && raw.weights && validateSeedSave(raw.weights)) {
+		return raw.weights;
+	}
+	if (Array.isArray(raw.records)) {
+		for (var i = 0; i < raw.records.length; i++) {
+			var item = raw.records[i];
+			if (item && item.nnAssistWeights && validateSeedSave(item.nnAssistWeights)) {
+				return item.nnAssistWeights;
+			}
+		}
+	}
+	return null;
+}
+
+function loadSeedSave(seedPath) {
+	if (!seedPath) {
+		return null;
+	}
+	var resolvedPath = path.isAbsolute(seedPath) ? seedPath : path.join(__dirname, "..", seedPath);
+	if (!fs.existsSync(resolvedPath)) {
+		console.warn("[evolve-ai] seed file not found:", resolvedPath);
+		return null;
+	}
+	try {
+		var raw = JSON.parse(fs.readFileSync(resolvedPath, "utf8"));
+		var save = resolveSeedSave(raw);
+		if (!save) {
+			console.warn("[evolve-ai] seed file has no valid v2 save:", resolvedPath);
+			return null;
+		}
+		console.log("[evolve-ai] seed loaded:", resolvedPath);
+		return save;
+	} catch (e) {
+		console.warn("[evolve-ai] load seed failed:", e.message);
+		return null;
+	}
+}
+
+function mutateSaveFromSeed(seedSave, range) {
+	var out = {
+		neurons: seedSave.neurons.slice(),
+		weights: []
+	};
+	for (var i = 0; i < seedSave.weights.length; i++) {
+		var w = seedSave.weights[i];
+		var delta = (Math.random() * 2 - 1) * range;
+		out.weights.push(w + delta);
+	}
+	return out;
+}
+
 function main() {
+	var seedSave = loadSeedSave(SEED_FILE);
+
+	if (OPPONENT_MODE === "self" && !seedSave && !ALLOW_SELF_NO_SEED) {
+		console.error("[evolve-ai] self 模式要求提供强种子：请设置 EVOLVE_SEED_FILE，避免随机网络开局。");
+		process.exit(1);
+	}
+	if (OPPONENT_MODE === "self" && !seedSave && ALLOW_SELF_NO_SEED) {
+		console.warn("[evolve-ai] self 冷启动：未提供种子，将以随机网络开始自对弈。");
+	}
+
 	// Neuroevolution 配置：控制遗传算法的核心行为
 	var ne = new Neuroevolution({
 		// 网络结构：[输入层, 隐藏层, 输出层]
-		// 本项目固定为 [6, [4], 1]：6维特征 -> 4个隐神经元 -> 1个assist输出
-		network: [nnFeatures.FEATURE_DIM, nnFeatures.NN_ASSIST_HIDDEN, 1],
+		// v2 结构：[22, [32], 1]：22维局部特征 -> 32隐层 -> 1个候选点评分
+		network: [nnFeatures.FEATURE_DIM_V2, nnFeatures.NN_ASSIST_HIDDEN_V2, 1],
 
 		// 每代种群大小：从环境变量读取，默认12
 		// 越大搜索范围越广，但每代评估时间线性增加
@@ -182,9 +303,9 @@ function main() {
 		// 保留优秀基因不丢失，但过高会减少多样性
 		elitism: 0.2,
 
-		// 随机注入比例：10%的个体使用最优结构但权重完全随机
+		// 随机注入比例：self 模式禁用随机网络，其他模式保留10%
 		// 保持种群多样性，防止过早收敛到局部最优
-		randomBehaviour: 0.1,
+		randomBehaviour: OPPONENT_MODE === "self" ? 0 : 0.1,
 
 		// 变异概率：繁殖时每个权重有15%概率发生变异
 		// 在继承的基础上引入微小扰动，探索邻近区域
@@ -209,20 +330,46 @@ function main() {
 	var bestEver = -Infinity;
 	var bestSave = null;
 	var bestCleanAfterGen0 = null;
+	var selfOpponentNet = null;
+	var selfOpponentPick = null;
+
+	if (OPPONENT_MODE === "self") {
+		selfOpponentNet = makeNetworkFromSave(seedSave);
+		selfOpponentPick = nnAssistPick.makePicker(selfOpponentNet, LAMBDA);
+	}
 
 	console.log("[evolve-ai] POPULATION=%d GENERATIONS=%d GAMES_PER_INDIVIDUAL=%d LAMBDA=%s",
 		POPULATION, GENERATIONS, GAMES, String(LAMBDA));
+	console.log("[evolve-ai] OPPONENT_MODE=%s", OPPONENT_MODE);
 	console.log("[evolve-ai] DRAW_FITNESS=%s WIN_SPEED_BONUS=%s FITNESS_NOISE=%s",
 		String(DRAW_FITNESS), String(WIN_SPEED_BONUS), String(FITNESS_NOISE));
 	console.log("[evolve-ai] clean=场均适应度（胜≈1+、负=-1、和=DRAW_FITNESS）；排序用 clean+小幅噪声。");
 
 	for (gen = 0; gen < GENERATIONS; gen++) {
 		nets = ne.nextGeneration();
+		if (gen === 0 && seedSave) {
+			var seedCount = OPPONENT_MODE === "self"
+				? nets.length
+				: Math.max(1, Math.floor(nets.length * SEED_RATIO));
+			for (i = 0; i < seedCount; i++) {
+				try {
+					nets[i].setSave(mutateSaveFromSeed(seedSave, SEED_MUT_RANGE));
+				} catch (e) {
+					console.warn("[evolve-ai] apply seed failed on net", i, e.message);
+				}
+			}
+			console.log("[evolve-ai] seeded first generation:", seedCount, "/", nets.length,
+				"range=", SEED_MUT_RANGE);
+		}
 		var bestThisNoisy = -Infinity;
 		var bestThisClean = -Infinity;
 		var cleans = [];
+		var evalContext = {
+			opponentMode: OPPONENT_MODE,
+			selfOpponentPick: selfOpponentPick
+		};
 		for (i = 0; i < nets.length; i++) {
-			var ev = evaluateNetworkNoisy(nets[i]);
+			var ev = evaluateNetworkNoisy(nets[i], evalContext);
 			ne.networkScore(nets[i], ev.noisy);
 			cleans.push(ev.clean);
 			if (ev.noisy > bestThisNoisy) {
@@ -235,6 +382,11 @@ function main() {
 				bestEver = ev.clean;
 				bestSave = nets[i].getSave();
 			}
+		}
+		if (OPPONENT_MODE === "self" && bestSave) {
+			// 自对弈模式下，让“当前历史最优”作为下一代固定对手，形成爬坡训练。
+			selfOpponentNet = makeNetworkFromSave(bestSave);
+			selfOpponentPick = nnAssistPick.makePicker(selfOpponentNet, LAMBDA);
 		}
 		var minC = Math.min.apply(null, cleans);
 		var maxC = Math.max.apply(null, cleans);
@@ -252,7 +404,7 @@ function main() {
 
 	if (GENERATIONS > 1 && bestCleanAfterGen0 !== null &&
 			bestEver - bestCleanAfterGen0 < 1e-5) {
-		console.log("[evolve-ai] 提示: bestCleanEver 较第 0 代几乎无提升。可试 GAMES_PER_INDIVIDUAL=6～8、NN_LAMBDA=0.12、GENERATIONS 增大，或略调 mutationRate。");
+			console.log("[evolve-ai] 提示: bestCleanEver 较第 0 代几乎无提升。可试 GAMES_PER_INDIVIDUAL=6~8、NN_LAMBDA=500/1000/1500、GENERATIONS 增大，或略调 mutationRate。");
 	}
 
 	if (!bestSave) {
@@ -267,7 +419,7 @@ function main() {
 	var stamp = new Date().toISOString().replace(/[:.]/g, "-");
 	var filePath = path.join(outDir, "evolved-" + stamp + ".json");
 	var payload = {
-		nnAssistSchemaVersion: 1,
+		nnAssistSchemaVersion: 2,
 		nnAssistWeights: bestSave,
 		evolvedAt: new Date().toISOString(),
 		bestFitness: bestEver,
