@@ -145,10 +145,10 @@ function linePatternScore(total, leftOpen, rightOpen) {
 	// 三连：区分活三、眠三、死三
 	if (total === 3) {
 		if (leftOpen && rightOpen) {
-			return { score: 2800, kind: "OPEN3" };
+			return { score: 10000, kind: "OPEN3" };  // 活三：两个成四点，仅次于冲四
 		}
 		if (leftOpen || rightOpen) {
-			return { score: 650, kind: "SLEEP3" };
+			return { score: 800, kind: "SLEEP3" };
 		}
 		return { score: 120, kind: "DEAD3" };
 	}

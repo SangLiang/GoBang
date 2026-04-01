@@ -10,9 +10,11 @@
  *   WIN_SPEED_BONUS（默认 0.04）胜局越早结束额外奖励（上限）
  *   FITNESS_NOISE（默认 0.015）加在「场均 clean」上的噪声；宜明显小于常见胜-负差距，否则会淹没真实差异
  *   EVOLVE_OPPONENT（默认 rule）对手模式：rule | self
+ *   EVOLVE_MIXED（默认 0）混合模式：1=每局随机选择对手（需设置 EVOLVE_SEED_FILE）
+ *   EVOLVE_MIXED_RATIO（默认 0.5）混合模式下选择 Rule AI 的概率（0~1）
  *   EVOLVE_SEED_FILE（可选）从已有 evolved/ai-training JSON 读取权重作为续训种子
  *   EVOLVE_ALLOW_SELF_NO_SEED（默认 0）self 模式无种子时是否允许冷启动（1=允许）
- *   EVOLVE_SEED_RATIO（默认 0.5）首代中使用种子扰动初始化的占比（0~1）
+ *   EVOLVE_SEED_RATIO（默认 0.8）首代中使用种子扰动初始化的占比（0~1）
  *   EVOLVE_SEED_MUTATION_RANGE（默认 0.2）种子扰动幅度（每个权重加减该范围内随机值）
  *   EVOLVE_POST_PORT 若设置（如 3847）则向 http://127.0.0.1:PORT/api/training POST 最优权重（会覆盖整文件，慎用）
  */
@@ -56,9 +58,18 @@ var OPPONENT_MODE = (process.env.EVOLVE_OPPONENT || "rule").toLowerCase();
 if (OPPONENT_MODE !== "rule" && OPPONENT_MODE !== "self") {
 	OPPONENT_MODE = "rule";
 }
+// 混合模式：每局随机选择对手（rule 或 self）
+var MIXED_MODE = process.env.EVOLVE_MIXED === "1";
+var MIXED_RATIO = parseFloat(process.env.EVOLVE_MIXED_RATIO || "0.5");
+if (isNaN(MIXED_RATIO) || MIXED_RATIO < 0) {
+	MIXED_RATIO = 0.5;
+}
+if (MIXED_RATIO > 1) {
+	MIXED_RATIO = 1;
+}
 var SEED_FILE = process.env.EVOLVE_SEED_FILE || "";
 var ALLOW_SELF_NO_SEED = process.env.EVOLVE_ALLOW_SELF_NO_SEED === "1";
-var SEED_RATIO = parseFloat(process.env.EVOLVE_SEED_RATIO || "0.5");
+var SEED_RATIO = parseFloat(process.env.EVOLVE_SEED_RATIO || "0.6");
 if (isNaN(SEED_RATIO)) {
 	SEED_RATIO = 0.5;
 }
@@ -119,16 +130,26 @@ function makeNetworkFromSave(save) {
 
 function evaluateNetworkClean(net, context) {
 	var pickNn = nnAssistPick.makePicker(net, LAMBDA);
-	var opponentPick = ruleAi.pickMove;
-	if (context && context.opponentMode === "self") {
-		opponentPick = context.selfOpponentPick;
-	}
+	var ruleOpponentPick = ruleAi.pickMove;
+	var selfOpponentPick = context && context.selfOpponentPick ? context.selfOpponentPick : null;
+	
 	var sum = 0;
 	var g;
 	var r;
 	var playingBlack;
 
 	for (g = 0; g < GAMES; g++) {
+		// 混合模式：每局随机选择对手
+		var opponentPick;
+		if (MIXED_MODE && selfOpponentPick) {
+			// 按比例选择对手：MIXED_RATIO 概率选择 Rule AI，否则选择自对弈
+			opponentPick = Math.random() < MIXED_RATIO ? ruleOpponentPick : selfOpponentPick;
+		} else if (context && context.opponentMode === "self") {
+			opponentPick = selfOpponentPick;
+		} else {
+			opponentPick = ruleOpponentPick;
+		}
+		
 		playingBlack = g % 2 === 0;
 		if (playingBlack) {
 			r = playout.playOneGame(pickNn, opponentPick);
@@ -281,6 +302,11 @@ function mutateSaveFromSeed(seedSave, range) {
 function main() {
 	var seedSave = loadSeedSave(SEED_FILE);
 
+	// 混合模式需要种子文件
+	if (MIXED_MODE && !seedSave) {
+		console.error("[evolve-ai] 混合模式要求提供种子：请设置 EVOLVE_SEED_FILE。");
+		process.exit(1);
+	}
 	if (OPPONENT_MODE === "self" && !seedSave && !ALLOW_SELF_NO_SEED) {
 		console.error("[evolve-ai] self 模式要求提供强种子：请设置 EVOLVE_SEED_FILE，避免随机网络开局。");
 		process.exit(1);
@@ -303,9 +329,9 @@ function main() {
 		// 保留优秀基因不丢失，但过高会减少多样性
 		elitism: 0.2,
 
-		// 随机注入比例：self 模式禁用随机网络，其他模式保留10%
+		// 随机注入比例：self/混合模式禁用随机网络，其他模式保留10%
 		// 保持种群多样性，防止过早收敛到局部最优
-		randomBehaviour: OPPONENT_MODE === "self" ? 0 : 0.1,
+		randomBehaviour: (OPPONENT_MODE === "self" || MIXED_MODE) ? 0 : 0.1,
 
 		// 变异概率：繁殖时每个权重有15%概率发生变异
 		// 在继承的基础上引入微小扰动，探索邻近区域
@@ -333,14 +359,20 @@ function main() {
 	var selfOpponentNet = null;
 	var selfOpponentPick = null;
 
-	if (OPPONENT_MODE === "self") {
+	// 初始化自对弈对手（混合模式或self模式都需要）
+	if (OPPONENT_MODE === "self" || MIXED_MODE) {
 		selfOpponentNet = makeNetworkFromSave(seedSave);
 		selfOpponentPick = nnAssistPick.makePicker(selfOpponentNet, LAMBDA);
 	}
 
 	console.log("[evolve-ai] POPULATION=%d GENERATIONS=%d GAMES_PER_INDIVIDUAL=%d LAMBDA=%s",
 		POPULATION, GENERATIONS, GAMES, String(LAMBDA));
-	console.log("[evolve-ai] OPPONENT_MODE=%s", OPPONENT_MODE);
+	if (MIXED_MODE) {
+		console.log("[evolve-ai] OPPONENT_MODE=mixed (rule:%d%% self:%d%%)", 
+			Math.round(MIXED_RATIO * 100), Math.round((1 - MIXED_RATIO) * 100));
+	} else {
+		console.log("[evolve-ai] OPPONENT_MODE=%s", OPPONENT_MODE);
+	}
 	console.log("[evolve-ai] DRAW_FITNESS=%s WIN_SPEED_BONUS=%s FITNESS_NOISE=%s",
 		String(DRAW_FITNESS), String(WIN_SPEED_BONUS), String(FITNESS_NOISE));
 	console.log("[evolve-ai] clean=场均适应度（胜≈1+、负=-1、和=DRAW_FITNESS）；排序用 clean+小幅噪声。");
@@ -348,7 +380,7 @@ function main() {
 	for (gen = 0; gen < GENERATIONS; gen++) {
 		nets = ne.nextGeneration();
 		if (gen === 0 && seedSave) {
-			var seedCount = OPPONENT_MODE === "self"
+			var seedCount = (OPPONENT_MODE === "self" || MIXED_MODE)
 				? nets.length
 				: Math.max(1, Math.floor(nets.length * SEED_RATIO));
 			for (i = 0; i < seedCount; i++) {
@@ -383,8 +415,8 @@ function main() {
 				bestSave = nets[i].getSave();
 			}
 		}
-		if (OPPONENT_MODE === "self" && bestSave) {
-			// 自对弈模式下，让“当前历史最优”作为下一代固定对手，形成爬坡训练。
+		if ((OPPONENT_MODE === "self" || MIXED_MODE) && bestSave) {
+			// 自对弈/混合模式下，让"当前历史最优"作为下一代固定对手，形成爬坡训练。
 			selfOpponentNet = makeNetworkFromSave(bestSave);
 			selfOpponentPick = nnAssistPick.makePicker(selfOpponentNet, LAMBDA);
 		}

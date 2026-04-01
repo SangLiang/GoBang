@@ -80,10 +80,10 @@ function linePatternScore(total, leftOpen, rightOpen) {
 	}
 	if (total === 3) {
 		if (leftOpen && rightOpen) {
-			return { "score": 2800, "kind": "OPEN3" };
+			return { "score": 10000, "kind": "OPEN3" };
 		}
 		if (leftOpen || rightOpen) {
-			return { "score": 650, "kind": "SLEEP3" };
+			return { "score": 800, "kind": "SLEEP3" };
 		}
 		return { "score": 120, "kind": "DEAD3" };
 	}
