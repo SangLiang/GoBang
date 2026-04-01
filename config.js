@@ -23,6 +23,27 @@ var NN_ASSIST_ENABLED = true;
 var NN_ASSIST_SCHEMA_VERSION = 2;
 var NN_LAMBDA = 1000;
 
+/**
+ * 进化训练配置（见 scripts/evolve-ai.js）
+ *
+ * EVOLVE_POPULATION — 每代种群大小
+ * EVOLVE_GENERATIONS — 进化代数
+ * EVOLVE_GAMES_PER_INDIVIDUAL — 每个个体评估局数
+ * EVOLVE_MIXED — 混合模式：1=每局随机选择对手（需设置种子文件）
+ * EVOLVE_MIXED_RATIO — 混合模式下选择 Rule AI 的概率（0~1）
+ * EVOLVE_SEED_FILE — 种子权重文件路径（从已有权重继续训练）
+ * EVOLVE_SEED_RATIO — 首代中使用种子初始化的占比（0~1）
+ * EVOLVE_SEED_MUTATION_RANGE — 种子扰动幅度
+ */
+var EVOLVE_POPULATION = 50;
+var EVOLVE_GENERATIONS = 50;
+var EVOLVE_GAMES_PER_INDIVIDUAL = 8;
+var EVOLVE_MIXED = 1;
+var EVOLVE_MIXED_RATIO = 0.5;
+var EVOLVE_SEED_FILE = "data/ai-training.json";
+var EVOLVE_SEED_RATIO = 0.8;
+var EVOLVE_SEED_MUTATION_RANGE = 0.3;
+
 var Res = {
     "images": [
         //---UI
@@ -33,4 +54,23 @@ var Res = {
     ],
     "fonts": [],
     "sound": []
+};
+
+// 导出配置（供 Node 脚本使用）
+module.exports = {
+    // NN 配置
+    NN_ASSIST_ENABLED: NN_ASSIST_ENABLED,
+    NN_ASSIST_SCHEMA_VERSION: NN_ASSIST_SCHEMA_VERSION,
+    NN_LAMBDA: NN_LAMBDA,
+    // 进化训练配置
+    EVOLVE_POPULATION: EVOLVE_POPULATION,
+    EVOLVE_GENERATIONS: EVOLVE_GENERATIONS,
+    EVOLVE_GAMES_PER_INDIVIDUAL: EVOLVE_GAMES_PER_INDIVIDUAL,
+    EVOLVE_MIXED: EVOLVE_MIXED,
+    EVOLVE_MIXED_RATIO: EVOLVE_MIXED_RATIO,
+    EVOLVE_SEED_FILE: EVOLVE_SEED_FILE,
+    EVOLVE_SEED_RATIO: EVOLVE_SEED_RATIO,
+    EVOLVE_SEED_MUTATION_RANGE: EVOLVE_SEED_MUTATION_RANGE,
+    // 资源配置
+    Res: Res
 };

@@ -1,22 +1,15 @@
 /**
  * Node 离线进化：NN 辅助网对局 ruleAi，适应度为胜/负/平均值。
  *
- * 环境变量：
- *   POPULATION（默认 12）
- *   GENERATIONS（默认 5）
- *   GAMES_PER_INDIVIDUAL（默认 4）局数越多，均值越稳定、排序越不靠运气
- *   NN_LAMBDA（默认 1000）评估时分数放大系数；应与 v2 配置保持一致
- *   DRAW_FITNESS（默认 -0.1）满盘和棋时的适应度
- *   WIN_SPEED_BONUS（默认 0.04）胜局越早结束额外奖励（上限）
- *   FITNESS_NOISE（默认 0.015）加在「场均 clean」上的噪声；宜明显小于常见胜-负差距，否则会淹没真实差异
- *   EVOLVE_OPPONENT（默认 rule）对手模式：rule | self
- *   EVOLVE_MIXED（默认 0）混合模式：1=每局随机选择对手（需设置 EVOLVE_SEED_FILE）
- *   EVOLVE_MIXED_RATIO（默认 0.5）混合模式下选择 Rule AI 的概率（0~1）
- *   EVOLVE_SEED_FILE（可选）从已有 evolved/ai-training JSON 读取权重作为续训种子
- *   EVOLVE_ALLOW_SELF_NO_SEED（默认 0）self 模式无种子时是否允许冷启动（1=允许）
- *   EVOLVE_SEED_RATIO（默认 0.8）首代中使用种子扰动初始化的占比（0~1）
- *   EVOLVE_SEED_MUTATION_RANGE（默认 0.2）种子扰动幅度（每个权重加减该范围内随机值）
- *   EVOLVE_POST_PORT 若设置（如 3847）则向 http://127.0.0.1:PORT/api/training POST 最优权重（会覆盖整文件，慎用）
+ * 配置优先级：环境变量 > config.js > 默认值
+ *
+ * 可在 config.js 中配置：
+ *   EVOLVE_POPULATION, EVOLVE_GENERATIONS, EVOLVE_GAMES_PER_INDIVIDUAL
+ *   EVOLVE_MIXED, EVOLVE_MIXED_RATIO, EVOLVE_SEED_FILE, EVOLVE_SEED_RATIO
+ *
+ * 也可通过环境变量覆盖（环境变量优先级更高）：
+ *   POPULATION, GENERATIONS, GAMES_PER_INDIVIDUAL
+ *   EVOLVE_MIXED, EVOLVE_MIXED_RATIO, EVOLVE_SEED_FILE, EVOLVE_SEED_RATIO
  */
 
 "use strict";
@@ -31,24 +24,27 @@ var playout = require("./playout");
 var nnAssistPick = require("./nnAssistPick");
 var nnFeatures = require(path.join(__dirname, "..", "public", "js", "nnFeatures.js"));
 
+// 从 config.js 读取默认配置
+var config = require(path.join(__dirname, "..", "config.js"));
+
 // ===== 进化算法核心参数 =====
 
 /** 每代种群大小：同时评估多少个不同权重组合
  *  越大搜索范围越广，但每代时间线性增加 */
-var POPULATION = parseInt(process.env.POPULATION || "50", 10);
+var POPULATION = parseInt(process.env.POPULATION || config.EVOLVE_POPULATION || "50", 10);
 
 /** 进化代数：总共迭代多少代
  *  代数越多进化越充分，但收益递减 */
-var GENERATIONS = parseInt(process.env.GENERATIONS || "30", 10);
+var GENERATIONS = parseInt(process.env.GENERATIONS || config.EVOLVE_GENERATIONS || "30", 10);
 
 /** 每个个体评估时的对局数：每套权重下多少盘棋
  *  越多均值越稳定、排序越不靠运气，但评估时间增加 */
-var GAMES = parseInt(process.env.GAMES_PER_INDIVIDUAL || "6", 10);
+var GAMES = parseInt(process.env.GAMES_PER_INDIVIDUAL || config.EVOLVE_GAMES_PER_INDIVIDUAL || "6", 10);
 
 /** v2 评分放大系数 lambda：weight = lambda * score */
-var LAMBDA = parseFloat(process.env.NN_LAMBDA || "1000");
+var LAMBDA = parseFloat(process.env.NN_LAMBDA || config.NN_LAMBDA || "1000");
 if (isNaN(LAMBDA)) {
-	LAMBDA = 1500;
+	LAMBDA = 1000;
 }
 
 /** 训练服务端口：若设置则自动POST最优权重到该端口
@@ -59,19 +55,19 @@ if (OPPONENT_MODE !== "rule" && OPPONENT_MODE !== "self") {
 	OPPONENT_MODE = "rule";
 }
 // 混合模式：每局随机选择对手（rule 或 self）
-var MIXED_MODE = process.env.EVOLVE_MIXED === "1";
-var MIXED_RATIO = parseFloat(process.env.EVOLVE_MIXED_RATIO || "0.5");
+var MIXED_MODE = (process.env.EVOLVE_MIXED || String(config.EVOLVE_MIXED || "0")) === "1";
+var MIXED_RATIO = parseFloat(process.env.EVOLVE_MIXED_RATIO || config.EVOLVE_MIXED_RATIO || "0.5");
 if (isNaN(MIXED_RATIO) || MIXED_RATIO < 0) {
 	MIXED_RATIO = 0.5;
 }
 if (MIXED_RATIO > 1) {
 	MIXED_RATIO = 1;
 }
-var SEED_FILE = process.env.EVOLVE_SEED_FILE || "";
+var SEED_FILE = process.env.EVOLVE_SEED_FILE || config.EVOLVE_SEED_FILE || "";
 var ALLOW_SELF_NO_SEED = process.env.EVOLVE_ALLOW_SELF_NO_SEED === "1";
-var SEED_RATIO = parseFloat(process.env.EVOLVE_SEED_RATIO || "0.6");
+var SEED_RATIO = parseFloat(process.env.EVOLVE_SEED_RATIO || config.EVOLVE_SEED_RATIO || "0.8");
 if (isNaN(SEED_RATIO)) {
-	SEED_RATIO = 0.5;
+	SEED_RATIO = 0.8;
 }
 if (SEED_RATIO < 0) {
 	SEED_RATIO = 0;
@@ -266,7 +262,9 @@ function loadSeedSave(seedPath) {
 	if (!seedPath) {
 		return null;
 	}
-	var resolvedPath = path.isAbsolute(seedPath) ? seedPath : path.join(__dirname, "..", seedPath);
+	// 使用 process.cwd() 作为项目根目录，确保路径正确
+	var projectRoot = path.resolve(__dirname, "..");
+	var resolvedPath = path.isAbsolute(seedPath) ? seedPath : path.join(projectRoot, seedPath);
 	if (!fs.existsSync(resolvedPath)) {
 		console.warn("[evolve-ai] seed file not found:", resolvedPath);
 		return null;

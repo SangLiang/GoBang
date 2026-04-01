@@ -64,13 +64,68 @@ function pickMove(gameList, gameTurn) {
 		var winPoint = getMostDangerPlace(winList);
 		var dangerPoint = getMostDangerPlace(dangerList);
 
-		// 决策规则：
-		// - 若“我方最佳进攻”更高，优先主动进攻
-		// - 否则优先落在“对手最危险点”进行拦截
-		if (winPoint.weight > dangerPoint.weight) {
-			position = { x: winPoint.x, y: winPoint.y };
+		// 活三阈值
+		var OPEN3_THRESHOLD = 10000;  // 活三及以上
+		
+		// 检查自己是否有活三
+		var myOpen3List = [];
+		for (i = 0; i < winList.length; i++) {
+			if (winList[i].weight >= OPEN3_THRESHOLD && winList[i].weight < 60000) {
+				myOpen3List.push(winList[i]);
+			}
+		}
+		var hasMyOpen3 = myOpen3List.length > 0;
+		
+		// 检查对手是否有活三
+		var opponentOpen3List = [];
+		for (i = 0; i < dangerList.length; i++) {
+			if (dangerList[i].weight >= OPEN3_THRESHOLD && dangerList[i].weight < 60000) {
+				opponentOpen3List.push(dangerList[i]);
+			}
+		}
+		var hasOpponentOpen3 = opponentOpen3List.length > 0;
+
+		// 决策策略：
+		// 1. 自己有活三 + 对手没有 → 优先进攻活三
+		// 2. 对手有活三 → 优先防守
+		// 3. 双方都有活三 → 先成四（进攻优先）
+		// 4. 都没有活三 → 正常比较
+		
+		if (hasMyOpen3 && !hasOpponentOpen3) {
+			// 策略1: 自己有活三，对手没有，优先进攻
+			var bestAttack = myOpen3List[0];
+			for (i = 0; i < myOpen3List.length; i++) {
+				if (myOpen3List[i].weight > bestAttack.weight) {
+					bestAttack = myOpen3List[i];
+				}
+			}
+			position = { x: bestAttack.x, y: bestAttack.y };
+		} else if (hasOpponentOpen3 && !hasMyOpen3) {
+			// 策略2: 对手有活三，自己没有，必须防守
+			var bestDefend = opponentOpen3List[0];
+			for (i = 0; i < opponentOpen3List.length; i++) {
+				if (opponentOpen3List[i].weight > bestDefend.weight) {
+					bestDefend = opponentOpen3List[i];
+				}
+			}
+			position = { x: bestDefend.x, y: bestDefend.y };
+		} else if (hasMyOpen3 && hasOpponentOpen3) {
+			// 策略3: 双方都有活三，先成四（进攻优先）
+			// 因为成四后有两个成五点，比防守更有利
+			var bestAttack = myOpen3List[0];
+			for (i = 0; i < myOpen3List.length; i++) {
+				if (myOpen3List[i].weight > bestAttack.weight) {
+					bestAttack = myOpen3List[i];
+				}
+			}
+			position = { x: bestAttack.x, y: bestAttack.y };
 		} else {
-			position = { x: dangerPoint.x, y: dangerPoint.y };
+			// 策略4: 都没有活三，正常比较
+			if (winPoint.weight > dangerPoint.weight) {
+				position = { x: winPoint.x, y: winPoint.y };
+			} else {
+				position = { x: dangerPoint.x, y: dangerPoint.y };
+			}
 		}
 	} else {
 		// 无候选时（例如开局空盘）默认走中心点
