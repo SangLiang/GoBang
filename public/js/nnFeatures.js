@@ -9,9 +9,13 @@ var NN_ASSIST_HIDDEN_V1 = [4];
 var FEATURE_DIM_V2 = 22;
 var NN_ASSIST_HIDDEN_V2 = [32];
 
-// 默认导出的维度/网络保持 v1，避免影响现有 S 模式。
+// 默认导出的维度/网络按 schema 选择（默认 v1，schema=2 时切到 v2）。
 var FEATURE_DIM = FEATURE_DIM_V1;
 var NN_ASSIST_HIDDEN = NN_ASSIST_HIDDEN_V1;
+if (typeof NN_ASSIST_SCHEMA_VERSION === "number" && NN_ASSIST_SCHEMA_VERSION === 2) {
+	FEATURE_DIM = FEATURE_DIM_V2;
+	NN_ASSIST_HIDDEN = NN_ASSIST_HIDDEN_V2;
+}
 
 var SCORE_SCALE = 1e6;
 var MAX_CAND = 50;
@@ -181,10 +185,30 @@ function buildFeaturesV2(gameList, x, y, player, context) {
 	return out;
 }
 
+function shouldUseV2(context) {
+	if (context && context.schemaVersion === 2) {
+		return true;
+	}
+	if (typeof NN_ASSIST_SCHEMA_VERSION === "number" && NN_ASSIST_SCHEMA_VERSION === 2) {
+		return true;
+	}
+	return false;
+}
+
 /**
- * 默认接口保持 v1，避免影响现有逻辑。
+ * 默认接口按 schema 自动分派：
+ * - schema=2: 走 v2
+ * - 其他: 走 v1
  */
 function buildFeatures(gameList, x, y, context) {
+	context = context || {};
+	if (shouldUseV2(context)) {
+		var player = context.player || 1;
+		return buildFeaturesV2(gameList, x, y, player, {
+			stonesOnBoard: context.stonesOnBoard,
+			isMyTurn: context.isMyTurn
+		});
+	}
 	return buildFeaturesV1(gameList, x, y, context);
 }
 
