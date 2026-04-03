@@ -35,6 +35,13 @@ var NN_LAMBDA = 1000;
  * EVOLVE_SEED_FILE — 种子权重文件路径（从已有权重继续训练）
  * EVOLVE_SEED_RATIO — 首代中使用种子初始化的占比（0~1）
  * EVOLVE_SEED_MUTATION_RANGE — 种子扰动幅度
+ * 
+ * EVOLVE_USE_OPPONENT_POOL — 是否启用对手池（默认true，防止过拟合）
+ * OPPONENT_POOL_SIZE — 对手池大小（默认8）
+ * OPPONENT_POOL_UPDATE_EVERY — 每N代更新一次池（默认5）
+ * OPPONENT_POOL_SAMPLING_TEMP — 采样温度（0.1~2.0，越小越倾向于选强对手）
+ * OPPONENT_POOL_RULE_RATIO — 池中规则AI比例（默认0.3）
+ * OPPONENT_POOL_RANDOM_RATIO — 池中随机对手比例（默认0.1）
  */
 var EVOLVE_POPULATION = 50;
 var EVOLVE_GENERATIONS = 30;
@@ -42,10 +49,18 @@ var EVOLVE_GAMES_PER_INDIVIDUAL = 7;
 var EVOLVE_PLAY_BLACK_RATIO = 0;
 var EVOLVE_MIXED = 0;
 var EVOLVE_MIXED_RATIO = 0.5;
-var EVOLVE_OPPONENT = "self";  // "self"=自对弈, "rule"=Rule AI
+var EVOLVE_OPPONENT = "self";  // "self"=自对弈, "rule"=Rule AI, "pool"=对手池
 var EVOLVE_SEED_FILE = "data/ai-training.json";
 var EVOLVE_SEED_RATIO = 0.8;
 var EVOLVE_SEED_MUTATION_RANGE = 0.3;
+
+// 对手池配置（防过拟合）
+var EVOLVE_USE_OPPONENT_POOL = true;  // 启用对手池（推荐！）
+var OPPONENT_POOL_SIZE = 8;           // 池大小
+var OPPONENT_POOL_UPDATE_EVERY = 5;   // 更新频率
+var OPPONENT_POOL_SAMPLING_TEMP = 0.5; // 采样温度（0.1=几乎总选最强，2.0=均匀随机）
+var OPPONENT_POOL_RULE_RATIO = 0.3;   // 规则AI比例
+var OPPONENT_POOL_RANDOM_RATIO = 0.1; // 随机对手比例
 
 /** 对手权重文件（用于自对弈训练）
  * 训练白棋时（PLAY_BLACK_RATIO=0）：读取 opponent-black.json 作为固定黑方
@@ -86,6 +101,13 @@ module.exports = {
     // 对手权重文件配置
     EVOLVE_OPPONENT_BLACK_FILE: EVOLVE_OPPONENT_BLACK_FILE,
     EVOLVE_OPPONENT_WHITE_FILE: EVOLVE_OPPONENT_WHITE_FILE,
+    // 对手池配置（防过拟合）
+    EVOLVE_USE_OPPONENT_POOL: EVOLVE_USE_OPPONENT_POOL,
+    OPPONENT_POOL_SIZE: OPPONENT_POOL_SIZE,
+    OPPONENT_POOL_UPDATE_EVERY: OPPONENT_POOL_UPDATE_EVERY,
+    OPPONENT_POOL_SAMPLING_TEMP: OPPONENT_POOL_SAMPLING_TEMP,
+    OPPONENT_POOL_RULE_RATIO: OPPONENT_POOL_RULE_RATIO,
+    OPPONENT_POOL_RANDOM_RATIO: OPPONENT_POOL_RANDOM_RATIO,
     // 资源配置
     Res: Res
 };

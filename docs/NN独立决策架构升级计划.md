@@ -520,7 +520,7 @@ for (g = 0; g < GAMES; g++) {
 
 **任务清单**：
 
-- [ ] **T1.1** 重写 `public/js/nnFeatures.js`
+- [x] **T1.1** 重写 `public/js/nnFeatures.js`（已完成：默认接口按 schema 自动分派到 v2，仍保留 v1 兼容）
   - `FEATURE_DIM` 改为 22
   - `NN_ASSIST_HIDDEN` 改为 `[32]`
   - `buildFeatures(gameList, x, y, player, context)` 实现 22 维特征提取
@@ -528,11 +528,11 @@ for (g = 0; g < GAMES; g++) {
   - 移除对 `attackScore`、`defenseScore` 的依赖
   - `nnAssistSchemaVersion` 改为 2
 
-- [ ] **T1.2** 在 `scripts/boardCore.js` 中新增 `buildLocalFeatures(gameList, x, y, player, stonesOnBoard)`
+- [x] **T1.2** 在 `scripts/boardCore.js` 中新增 `buildLocalFeatures(gameList, x, y, player, stonesOnBoard)`
   - Node 侧的 22 维特征提取，逻辑与浏览器端 `buildFeatures` 一致
   - 供进化脚本 `nnAssistPick.js` 调用
 
-- [ ] **T1.3** 编写特征验证脚本 `scripts/verify-features.js`
+- [x] **T1.3** 编写特征验证脚本 `scripts/verify-features.js`
   - 构造若干测试棋盘局面
   - 验证特征值是否符合预期
   - 验证浏览器端与 Node 端特征一致性
@@ -552,29 +552,29 @@ for (g = 0; g < GAMES; g++) {
 
 **任务清单**：
 
-- [ ] **T2.1** 重写 `public/js/AI.js` 的评分逻辑
-  - 移除 `attackScore` / `defenseScore` 双列表
+- [x] **T2.1** 重写 `public/js/AI.js` 的评分逻辑（已完成 v2 主路径；保留 v1 兼容分支作为兜底）
+  - v2 主路径移除 `attackScore` / `defenseScore` 双列表（v1 兼容分支保留）
   - 改为单列表：`features → NN compute → score → weight = lambda * score`
   - 保留候选点遍历、最高分选取、落子、判胜负流程
   - 保留 NN 开关控制（`NN_ASSIST_ENABLED`、`NN_LAMBDA`）
   - 更新 metric 日志标签为 `[AI][NN_V2][metric]`
 
-- [ ] **T2.2** 重写 `scripts/nnAssistPick.js`
+- [x] **T2.2** 重写 `scripts/nnAssistPick.js`
   - 使用 `boardCore.buildLocalFeatures` 提取特征
   - NN 直接打分选点，不再混合 `getPatternScoreAt`
   - 供进化脚本 `evolve-ai.js` 调用
 
-- [ ] **T2.3** 更新 `scripts/evolve-ai.js`
+- [x] **T2.3** 更新 `scripts/evolve-ai.js`
   - 网络结构改为 `[22, [32], 1]`
   - 适配新的 `nnAssistPick` 接口
   - 输出文件增加 `nnAssistSchemaVersion: 2`
 
-- [ ] **T2.4** 更新 `public/js/nnAssist.js`
+- [x] **T2.4** 更新 `public/js/nnAssist.js`
   - 适配 `nnAssistSchemaVersion = 2` 的权重加载
   - 网络结构改为 `[22, [32], 1]`
   - 保留对 v1 权重的兼容（schemaVersion=1 时用旧结构）
 
-- [ ] **T2.5** 更新 `config.js`
+- [x] **T2.5** 更新 `config.js`
   - `NN_LAMBDA` 默认值改为 1000（v2 需要更大系数）
   - `NN_ASSIST_SCHEMA_VERSION` 改为 2
 
@@ -583,6 +583,7 @@ for (g = 0; g < GAMES; g++) {
 - 能完成完整对局到终局
 - `npm run evolve` 能正常运行并产出 `evolved-*.json`
 - 进化输出的 `nnAssistWeights.neurons === [22, 32, 1]`
+- 兼容策略明确：`schemaVersion=2` 走 v2 主路径，`schemaVersion=1` 或关闭 NN 时回退到兼容/规则路径
 
 **预估工时**：3~5 天
 
@@ -655,7 +656,7 @@ for (g = 0; g < GAMES; g++) {
   - 每个 lambda 下对战 ruleAi 100 局，记录胜率
   - 输出最优 lambda
 
-- [ ] **T4.3** 断点续训支持
+- [x] **T4.3** 断点续训支持
   - 修改 `evolve-ai.js`，支持从已有权重文件初始化种群
   - 环境变量：`EVOLVE_SEED_FILE=data/evolved-xxx.json`
   - 种群中一定比例（如 50%）从种子权重变异而来
@@ -665,7 +666,7 @@ for (g = 0; g < GAMES; g++) {
     - 减少候选点上限（从 50 降到 30）
     - 或减少隐藏层神经元（32 → 24）
 
-- [ ] **T4.5** 文档更新
+- [ ] **T4.5** 文档更新（部分完成：`README.md` 与 `scripts/README-evolve.md` 已更新，其余文档仍待同步）
   - 更新 `docs/开发手册.md` 的相关章节
   - 更新 `docs/神经进化功能实现计划.md`
   - 更新 `README.md`（如果存在）

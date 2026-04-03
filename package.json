@@ -14,6 +14,7 @@
     "selftest:playout": "node scripts/selftest-playout.js",
     "verify:nn-lambda": "node scripts/verify-nn-lambda-effect.js",
     "evolve": "node scripts/evolve-ai.js",
+    "evolve:pool": "node scripts/evolve-ai-enhanced.js",
     "evolve:seed": "node scripts/evolve-ai.js",
     "evolve:self": "node scripts/evolve-ai.js",
     "evolve:self:coldstart": "node scripts/evolve-ai.js",
