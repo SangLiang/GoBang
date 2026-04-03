@@ -41,6 +41,19 @@ var GENERATIONS = parseInt(process.env.GENERATIONS || config.EVOLVE_GENERATIONS 
  *  越多均值越稳定、排序越不靠运气，但评估时间增加 */
 var GAMES = parseInt(process.env.GAMES_PER_INDIVIDUAL || config.EVOLVE_GAMES_PER_INDIVIDUAL || "6", 10);
 
+/** NN AI 执黑的比例（0~1）*/
+// 修复：环境变量可能为空字符串，需要检查有效性
+var envPlayBlackRatio = process.env.EVOLVE_PLAY_BLACK_RATIO;
+var PLAY_BLACK_RATIO = parseFloat(
+	(envPlayBlackRatio && envPlayBlackRatio.trim() !== "") ? envPlayBlackRatio : (config.EVOLVE_PLAY_BLACK_RATIO !== undefined ? config.EVOLVE_PLAY_BLACK_RATIO : "0.5")
+);
+if (isNaN(PLAY_BLACK_RATIO) || PLAY_BLACK_RATIO < 0) {
+	PLAY_BLACK_RATIO = 0.5;
+}
+if (PLAY_BLACK_RATIO > 1) {
+	PLAY_BLACK_RATIO = 1;
+}
+
 /** v2 评分放大系数 lambda：weight = lambda * score */
 var LAMBDA = parseFloat(process.env.NN_LAMBDA || config.NN_LAMBDA || "1000");
 if (isNaN(LAMBDA)) {
@@ -65,6 +78,13 @@ if (MIXED_RATIO > 1) {
 }
 var SEED_FILE = process.env.EVOLVE_SEED_FILE || config.EVOLVE_SEED_FILE || "";
 var ALLOW_SELF_NO_SEED = process.env.EVOLVE_ALLOW_SELF_NO_SEED === "1";
+
+/** 对手权重文件：根据 PLAY_BLACK_RATIO 自动选择
+ *  PLAY_BLACK_RATIO=0 (NN执白)：对手是黑方，读取 opponent-black.json
+ *  PLAY_BLACK_RATIO=1 (NN执黑)：对手是白方，读取 opponent-white.json */
+var OPPONENT_BLACK_FILE = config.EVOLVE_OPPONENT_BLACK_FILE || "data/opponent-black.json";
+var OPPONENT_WHITE_FILE = config.EVOLVE_OPPONENT_WHITE_FILE || "data/opponent-white.json";
+var OPPONENT_FILE = PLAY_BLACK_RATIO === 0 ? OPPONENT_BLACK_FILE : OPPONENT_WHITE_FILE;
 var SEED_RATIO = parseFloat(process.env.EVOLVE_SEED_RATIO || config.EVOLVE_SEED_RATIO || "0.8");
 if (isNaN(SEED_RATIO)) {
 	SEED_RATIO = 0.8;
@@ -124,7 +144,7 @@ function makeNetworkFromSave(save) {
 	return n;
 }
 
-function evaluateNetworkClean(net, context) {
+function evaluateNetworkClean(net, context, debug) {
 	var pickNn = nnAssistPick.makePicker(net, LAMBDA);
 	var ruleOpponentPick = ruleAi.pickMove;
 	var selfOpponentPick = context && context.selfOpponentPick ? context.selfOpponentPick : null;
@@ -133,6 +153,8 @@ function evaluateNetworkClean(net, context) {
 	var g;
 	var r;
 	var playingBlack;
+	var wins = 0;
+	var losses = 0;
 
 	for (g = 0; g < GAMES; g++) {
 		// 混合模式：每局随机选择对手
@@ -146,14 +168,28 @@ function evaluateNetworkClean(net, context) {
 			opponentPick = ruleOpponentPick;
 		}
 		
-		playingBlack = g % 2 === 0;
+		// 确定执黑/执白：按比例随机
+		playingBlack = Math.random() < PLAY_BLACK_RATIO;
+		
 		if (playingBlack) {
 			r = playout.playOneGame(pickNn, opponentPick);
 		} else {
 			r = playout.playOneGame(opponentPick, pickNn);
 		}
 		sum += playout.fitnessFromResult(r.winner, playingBlack, r.moves, FITNESS_OPTS);
+		
+		if (debug) {
+			var isWin = (!playingBlack && r.winner === "white") || (playingBlack && r.winner === "black");
+			var isLoss = (!playingBlack && r.winner === "black") || (playingBlack && r.winner === "white");
+			if (isWin) wins++;
+			if (isLoss) losses++;
+		}
 	}
+	
+	if (debug) {
+		console.log("[debug] 适应度=" + (sum/GAMES).toFixed(4) + ", 胜=" + wins + ", 负=" + losses + ", 和=" + (GAMES-wins-losses));
+	}
+	
 	return sum / GAMES;
 }
 
@@ -299,17 +335,30 @@ function mutateSaveFromSeed(seedSave, range) {
 
 function main() {
 	var seedSave = loadSeedSave(SEED_FILE);
+	
+	// 自对弈模式下，加载对手权重文件
+	var opponentSave = null;
+	if (OPPONENT_MODE === "self") {
+		opponentSave = loadSeedSave(OPPONENT_FILE);
+		if (opponentSave) {
+			console.log("[evolve-ai] opponent loaded:", OPPONENT_FILE, 
+				PLAY_BLACK_RATIO === 0 ? "(固定黑方)" : "(固定白方)");
+		} else {
+			console.warn("[evolve-ai] opponent file not found, using seed:", OPPONENT_FILE);
+			opponentSave = seedSave;
+		}
+	}
 
 	// 混合模式需要种子文件
 	if (MIXED_MODE && !seedSave) {
 		console.error("[evolve-ai] 混合模式要求提供种子：请设置 EVOLVE_SEED_FILE。");
 		process.exit(1);
 	}
-	if (OPPONENT_MODE === "self" && !seedSave && !ALLOW_SELF_NO_SEED) {
-		console.error("[evolve-ai] self 模式要求提供强种子：请设置 EVOLVE_SEED_FILE，避免随机网络开局。");
+	if (OPPONENT_MODE === "self" && !seedSave && !opponentSave && !ALLOW_SELF_NO_SEED) {
+		console.error("[evolve-ai] self 模式要求提供强种子：请设置 EVOLVE_SEED_FILE 或创建对手文件。");
 		process.exit(1);
 	}
-	if (OPPONENT_MODE === "self" && !seedSave && ALLOW_SELF_NO_SEED) {
+	if (OPPONENT_MODE === "self" && !seedSave && !opponentSave && ALLOW_SELF_NO_SEED) {
 		console.warn("[evolve-ai] self 冷启动：未提供种子，将以随机网络开始自对弈。");
 	}
 
@@ -359,12 +408,14 @@ function main() {
 
 	// 初始化自对弈对手（混合模式或self模式都需要）
 	if (OPPONENT_MODE === "self" || MIXED_MODE) {
-		selfOpponentNet = makeNetworkFromSave(seedSave);
+		selfOpponentNet = makeNetworkFromSave(opponentSave || seedSave);
 		selfOpponentPick = nnAssistPick.makePicker(selfOpponentNet, LAMBDA);
 	}
 
-	console.log("[evolve-ai] POPULATION=%d GENERATIONS=%d GAMES_PER_INDIVIDUAL=%d LAMBDA=%s",
+	console.log("[evolve-ai] POPULATION=%d GENERATIONS=%d GAMES=%d LAMBDA=%s",
 		POPULATION, GENERATIONS, GAMES, String(LAMBDA));
+	console.log("[evolve-ai] PLAY_BLACK_RATIO=%d%% (按比例随机执黑/执白)", 
+		Math.round(PLAY_BLACK_RATIO * 100));
 	if (MIXED_MODE) {
 		console.log("[evolve-ai] OPPONENT_MODE=mixed (rule:%d%% self:%d%%)", 
 			Math.round(MIXED_RATIO * 100), Math.round((1 - MIXED_RATIO) * 100));
@@ -399,7 +450,9 @@ function main() {
 			selfOpponentPick: selfOpponentPick
 		};
 		for (i = 0; i < nets.length; i++) {
-			var ev = evaluateNetworkNoisy(nets[i], evalContext);
+			var debug = (gen === 0 && i < 5); // 第0代前5个个体启用debug
+			if (debug) console.log("[debug] 评估个体#" + i);
+			var ev = evaluateNetworkNoisy(nets[i], evalContext, debug);
 			ne.networkScore(nets[i], ev.noisy);
 			cleans.push(ev.clean);
 			if (ev.noisy > bestThisNoisy) {
@@ -413,11 +466,8 @@ function main() {
 				bestSave = nets[i].getSave();
 			}
 		}
-		if ((OPPONENT_MODE === "self" || MIXED_MODE) && bestSave) {
-			// 自对弈/混合模式下，让"当前历史最优"作为下一代固定对手，形成爬坡训练。
-			selfOpponentNet = makeNetworkFromSave(bestSave);
-			selfOpponentPick = nnAssistPick.makePicker(selfOpponentNet, LAMBDA);
-		}
+		// 固定黑方对手为种子权重，只让白方（NN AI）进化学习防守
+	// 注意：selfOpponentNet 在 main() 中已经用 seedSave 初始化，这里不更新
 		var minC = Math.min.apply(null, cleans);
 		var maxC = Math.max.apply(null, cleans);
 		var medC = medianSorted(cleans);
