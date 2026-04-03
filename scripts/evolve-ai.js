@@ -493,7 +493,7 @@ function main() {
 		process.exit(1);
 	}
 
-	var outDir = path.join(__dirname, "..", "data");
+	var outDir = path.join(__dirname, "..", "data", "evolved");
 	if (!fs.existsSync(outDir)) {
 		fs.mkdirSync(outDir, { recursive: true });
 	}

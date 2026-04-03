@@ -66,9 +66,13 @@ npm run tools:update-black
 GoBang/
 ├── scripts/          # 核心训练脚本（evolve-ai.js, boardCore.js 等）
 ├── tools/            # 辅助工具脚本（本目录）
-├── data/             # 数据文件
-│   ├── opponent-black.json    # 固定黑方权重
-│   ├── opponent-white.json    # 固定白方权重
-│   └── evolved-*.json         # 训练结果
-└── ...
+└── data/             # 数据文件
+    ├── opponent-black.json    # 固定黑方权重
+    ├── opponent-white.json    # 固定白方权重
+    ├── ai-training.json       # 主训练数据
+    ├── log.log                # 训练日志
+    ├── evolved/               # 训练结果权重
+    │   └── evolved-<时间戳>.json
+    └── games/                 # 训练棋谱
+        └── games-<时间戳>.txt
 ```

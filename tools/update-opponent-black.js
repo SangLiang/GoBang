@@ -13,6 +13,7 @@ var fs = require("fs");
 var path = require("path");
 
 var dataDir = path.join(__dirname, "..", "data");
+var evolvedDir = path.join(dataDir, "evolved");
 
 // 获取命令行参数
 var args = process.argv.slice(2);
@@ -20,10 +21,10 @@ var sourceFile = args[0] || null;
 
 // 如果没有指定文件，找最新的 evolved 文件
 if (!sourceFile) {
-	var files = fs.readdirSync(dataDir)
+	var files = fs.readdirSync(evolvedDir)
 		.filter(function(f) { return f.startsWith("evolved-") && f.endsWith(".json"); })
 		.map(function(f) {
-			var stat = fs.statSync(path.join(dataDir, f));
+			var stat = fs.statSync(path.join(evolvedDir, f));
 			return { file: f, mtime: stat.mtime };
 		})
 		.sort(function(a, b) { return b.mtime - a.mtime; });

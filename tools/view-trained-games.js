@@ -70,12 +70,13 @@ function recordGame(blackPick, whitePick) {
 }
 
 var dataDir = path.join(__dirname, "..", "data");
+var evolvedDir = path.join(dataDir, "evolved");
 var config = require(path.join(__dirname, "..", "config.js"));
 
 // 自动找最新的 evolved 文件
-var evolvedFiles = fs.readdirSync(dataDir)
+var evolvedFiles = fs.readdirSync(evolvedDir)
 	.filter(function(f) { return f.startsWith("evolved-") && f.endsWith(".json"); })
-	.map(function(f) { return { file: f, mtime: fs.statSync(path.join(dataDir, f)).mtime }; })
+	.map(function(f) { return { file: f, mtime: fs.statSync(path.join(evolvedDir, f)).mtime }; })
 	.sort(function(a, b) { return b.mtime - a.mtime; });
 
 if (evolvedFiles.length === 0) {
@@ -84,7 +85,7 @@ if (evolvedFiles.length === 0) {
 }
 
 var latestEvolved = evolvedFiles[0].file;
-var evolvedData = JSON.parse(fs.readFileSync(path.join(dataDir, latestEvolved), "utf8"));
+var evolvedData = JSON.parse(fs.readFileSync(path.join(evolvedDir, latestEvolved), "utf8"));
 
 // 从 config.js 读取当前训练配置
 var playBlackRatio = parseFloat(config.EVOLVE_PLAY_BLACK_RATIO !== undefined ? config.EVOLVE_PLAY_BLACK_RATIO : "0");
@@ -123,11 +124,11 @@ var whiteNet = makeNetworkFromSave(whiteSave);
 var blackPick = nnAssistPick.makePicker(blackNet, 1000);
 var whitePick = nnAssistPick.makePicker(whiteNet, 1000);
 
-// 记录3局详细棋谱
+// 记录10局详细棋谱
 var allTexts = [];
 var trainedWins = 0, opponentWins = 0;
 
-for (var i = 0; i < 3; i++) {
+for (var i = 0; i < 10; i++) {
 	var result = recordGame(blackPick, whitePick);
 	
 	var isTrainedWin = result.winner === (playBlackRatio === 0 ? "白" : "黑");
@@ -154,14 +155,6 @@ for (var i = 0; i < 3; i++) {
 	console.log("第" + (i+1) + "局: " + (result.winner ? result.winner + "方胜" : "和棋") + ", " + result.moves.length + "手");
 }
 
-// 统计10局
-for (var i = 0; i < 7; i++) {
-	var result = recordGame(blackPick, whitePick);
-	var isTrainedWin = result.winner === (playBlackRatio === 0 ? "白" : "黑");
-	if (isTrainedWin) trainedWins++;
-	else if (result.winner) opponentWins++;
-}
-
 var summary = "\n" + "=".repeat(50) + "\n";
 summary += "10局统计\n";
 summary += "=".repeat(50) + "\n";
@@ -172,7 +165,13 @@ summary += "和棋: " + (10 - trainedWins - opponentWins) + "\n";
 allTexts.push(summary);
 console.log(summary);
 
+var gamesDir = path.join(dataDir, "games");
+if (!fs.existsSync(gamesDir)) {
+	fs.mkdirSync(gamesDir, { recursive: true });
+}
+
 var fullText = allTexts.join("\n\n");
-var outputFile = path.join(dataDir, "latest-games.txt");
+var stamp = new Date().toISOString().replace(/[:.]/g, "-");
+var outputFile = path.join(gamesDir, "games-" + stamp + ".txt");
 fs.writeFileSync(outputFile, fullText, "utf8");
-console.log("详细棋谱已保存到: data/latest-games.txt");
+console.log("详细棋谱已保存到: " + path.relative(path.join(__dirname, ".."), outputFile));
