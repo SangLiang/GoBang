@@ -1,15 +1,14 @@
 /**
  * Node 离线进化：NN 辅助网对局 ruleAi，适应度为胜/负/平均值。
  *
- * 配置优先级：环境变量 > config.js > 默认值
+ * 所有配置统一从 config.js 读取，不支持环境变量覆盖。
  *
  * 可在 config.js 中配置：
  *   EVOLVE_POPULATION, EVOLVE_GENERATIONS, EVOLVE_GAMES_PER_INDIVIDUAL
- *   EVOLVE_MIXED, EVOLVE_MIXED_RATIO, EVOLVE_SEED_FILE, EVOLVE_SEED_RATIO
- *
- * 也可通过环境变量覆盖（环境变量优先级更高）：
- *   POPULATION, GENERATIONS, GAMES_PER_INDIVIDUAL
- *   EVOLVE_MIXED, EVOLVE_MIXED_RATIO, EVOLVE_SEED_FILE, EVOLVE_SEED_RATIO
+ *   EVOLVE_PLAY_BLACK_RATIO, EVOLVE_OPPONENT, EVOLVE_MIXED, EVOLVE_MIXED_RATIO
+ *   EVOLVE_SEED_FILE, EVOLVE_SEED_RATIO, EVOLVE_SEED_MUTATION_RANGE
+ *   EVOLVE_OPPONENT_BLACK_FILE, EVOLVE_OPPONENT_WHITE_FILE
+ *   NN_LAMBDA, DRAW_FITNESS, WIN_SPEED_BONUS, FITNESS_NOISE
  */
 
 "use strict";
@@ -24,29 +23,23 @@ var playout = require("./playout");
 var nnAssistPick = require("./nnAssistPick");
 var nnFeatures = require(path.join(__dirname, "..", "public", "js", "nnFeatures.js"));
 
-// 从 config.js 读取默认配置
+// ===== 所有配置统一从 config.js 读取 =====
+
 var config = require(path.join(__dirname, "..", "config.js"));
 
 // ===== 进化算法核心参数 =====
 
-/** 每代种群大小：同时评估多少个不同权重组合
- *  越大搜索范围越广，但每代时间线性增加 */
-var POPULATION = parseInt(process.env.POPULATION || config.EVOLVE_POPULATION || "50", 10);
+/** 每代种群大小 */
+var POPULATION = parseInt(config.EVOLVE_POPULATION || "50", 10);
 
-/** 进化代数：总共迭代多少代
- *  代数越多进化越充分，但收益递减 */
-var GENERATIONS = parseInt(process.env.GENERATIONS || config.EVOLVE_GENERATIONS || "30", 10);
+/** 进化代数 */
+var GENERATIONS = parseInt(config.EVOLVE_GENERATIONS || "30", 10);
 
-/** 每个个体评估时的对局数：每套权重下多少盘棋
- *  越多均值越稳定、排序越不靠运气，但评估时间增加 */
-var GAMES = parseInt(process.env.GAMES_PER_INDIVIDUAL || config.EVOLVE_GAMES_PER_INDIVIDUAL || "6", 10);
+/** 每个个体评估时的对局数 */
+var GAMES = parseInt(config.EVOLVE_GAMES_PER_INDIVIDUAL || "6", 10);
 
 /** NN AI 执黑的比例（0~1）*/
-// 修复：环境变量可能为空字符串，需要检查有效性
-var envPlayBlackRatio = process.env.EVOLVE_PLAY_BLACK_RATIO;
-var PLAY_BLACK_RATIO = parseFloat(
-	(envPlayBlackRatio && envPlayBlackRatio.trim() !== "") ? envPlayBlackRatio : (config.EVOLVE_PLAY_BLACK_RATIO !== undefined ? config.EVOLVE_PLAY_BLACK_RATIO : "0.5")
-);
+var PLAY_BLACK_RATIO = parseFloat(config.EVOLVE_PLAY_BLACK_RATIO !== undefined ? config.EVOLVE_PLAY_BLACK_RATIO : "0.5");
 if (isNaN(PLAY_BLACK_RATIO) || PLAY_BLACK_RATIO < 0) {
 	PLAY_BLACK_RATIO = 0.5;
 }
@@ -55,37 +48,43 @@ if (PLAY_BLACK_RATIO > 1) {
 }
 
 /** v2 评分放大系数 lambda：weight = lambda * score */
-var LAMBDA = parseFloat(process.env.NN_LAMBDA || config.NN_LAMBDA || "1000");
+var LAMBDA = parseFloat(config.NN_LAMBDA || "1000");
 if (isNaN(LAMBDA)) {
 	LAMBDA = 1000;
 }
 
-/** 训练服务端口：若设置则自动POST最优权重到该端口
- *  例如 3847 会 POST 到 http://127.0.0.1:3847/api/training */
-var POST_PORT = process.env.EVOLVE_POST_PORT;
-var OPPONENT_MODE = (process.env.EVOLVE_OPPONENT || "rule").toLowerCase();
+/** 训练服务端口：若设置则自动POST最优权重到该端口 */
+var POST_PORT = config.EVOLVE_POST_PORT;
+
+/** 对手模式："self"=自对弈, "rule"=Rule AI */
+var OPPONENT_MODE = (config.EVOLVE_OPPONENT || "rule").toLowerCase();
 if (OPPONENT_MODE !== "rule" && OPPONENT_MODE !== "self") {
 	OPPONENT_MODE = "rule";
 }
-// 混合模式：每局随机选择对手（rule 或 self）
-var MIXED_MODE = (process.env.EVOLVE_MIXED || String(config.EVOLVE_MIXED || "0")) === "1";
-var MIXED_RATIO = parseFloat(process.env.EVOLVE_MIXED_RATIO || config.EVOLVE_MIXED_RATIO || "0.5");
+
+/** 混合模式：每局随机选择对手（rule 或 self）*/
+var MIXED_MODE = String(config.EVOLVE_MIXED || "0") === "1";
+var MIXED_RATIO = parseFloat(config.EVOLVE_MIXED_RATIO || "0.5");
 if (isNaN(MIXED_RATIO) || MIXED_RATIO < 0) {
 	MIXED_RATIO = 0.5;
 }
 if (MIXED_RATIO > 1) {
 	MIXED_RATIO = 1;
 }
-var SEED_FILE = process.env.EVOLVE_SEED_FILE || config.EVOLVE_SEED_FILE || "";
-var ALLOW_SELF_NO_SEED = process.env.EVOLVE_ALLOW_SELF_NO_SEED === "1";
 
-/** 对手权重文件：根据 PLAY_BLACK_RATIO 自动选择
- *  PLAY_BLACK_RATIO=0 (NN执白)：对手是黑方，读取 opponent-black.json
- *  PLAY_BLACK_RATIO=1 (NN执黑)：对手是白方，读取 opponent-white.json */
+/** 种子文件路径 */
+var SEED_FILE = config.EVOLVE_SEED_FILE || "";
+
+/** 是否允许无种子冷启动 */
+var ALLOW_SELF_NO_SEED = config.EVOLVE_ALLOW_SELF_NO_SEED === true;
+
+/** 对手权重文件 */
 var OPPONENT_BLACK_FILE = config.EVOLVE_OPPONENT_BLACK_FILE || "data/opponent-black.json";
 var OPPONENT_WHITE_FILE = config.EVOLVE_OPPONENT_WHITE_FILE || "data/opponent-white.json";
 var OPPONENT_FILE = PLAY_BLACK_RATIO === 0 ? OPPONENT_BLACK_FILE : OPPONENT_WHITE_FILE;
-var SEED_RATIO = parseFloat(process.env.EVOLVE_SEED_RATIO || config.EVOLVE_SEED_RATIO || "0.8");
+
+/** 首代种子占比 */
+var SEED_RATIO = parseFloat(config.EVOLVE_SEED_RATIO || "0.8");
 if (isNaN(SEED_RATIO)) {
 	SEED_RATIO = 0.8;
 }
@@ -95,7 +94,9 @@ if (SEED_RATIO < 0) {
 if (SEED_RATIO > 1) {
 	SEED_RATIO = 1;
 }
-var SEED_MUT_RANGE = parseFloat(process.env.EVOLVE_SEED_MUTATION_RANGE || "0.2");
+
+/** 种子扰动幅度 */
+var SEED_MUT_RANGE = parseFloat(config.EVOLVE_SEED_MUTATION_RANGE || "0.2");
 if (isNaN(SEED_MUT_RANGE) || SEED_MUT_RANGE < 0) {
 	SEED_MUT_RANGE = 0.2;
 }
@@ -193,8 +194,8 @@ function evaluateNetworkClean(net, context, debug) {
 	return sum / GAMES;
 }
 
-function evaluateNetworkNoisy(net, context) {
-	var clean = evaluateNetworkClean(net, context);
+function evaluateNetworkNoisy(net, context, debug) {
+	var clean = evaluateNetworkClean(net, context, debug);
 	var noisy = clean + (Math.random() - 0.5) * FITNESS_NOISE;
 	return { clean: clean, noisy: noisy };
 }
