@@ -6,6 +6,7 @@ var UI = require("./UI");
 var trainingApi = require("./trainingApi");
 var nnAssist = require("./nnAssist");
 var nnFeatures = require("./nnFeatures");
+var constants = require("./constants");
 
 function AI() {
 	var self = this;
@@ -78,9 +79,10 @@ AI.prototype = {
 			// 复用当前决策规则：比较 winPoint 与 dangerPoint 的 weight，返回最终点位。
 			// 进攻+防守活三策略
 			function choosePointByWeight(winPoint, dangerPoint) {
-				var OPEN3_THRESHOLD = 10000;  // 活三及以上
-				var hasMyOpen3 = winPoint.weight >= OPEN3_THRESHOLD && winPoint.weight < 60000;
-				var hasOpponentOpen3 = dangerPoint.weight >= OPEN3_THRESHOLD && dangerPoint.weight < 60000;
+				var OPEN3_THRESHOLD = constants.SCORES.OPEN3_THRESHOLD;  // 活三及以上
+				var OPEN3_UPPER_BOUND = constants.SCORES.OPEN3_UPPER_BOUND;  // 活三上限
+				var hasMyOpen3 = winPoint.weight >= OPEN3_THRESHOLD && winPoint.weight < OPEN3_UPPER_BOUND;
+				var hasOpponentOpen3 = dangerPoint.weight >= OPEN3_THRESHOLD && dangerPoint.weight < OPEN3_UPPER_BOUND;
 				
 				if (hasMyOpen3 && !hasOpponentOpen3) {
 					return { "x": winPoint.x, "y": winPoint.y };
@@ -341,8 +343,8 @@ AI.prototype = {
 		} else {
 			// 无候选点时回落到天元
 			position = {
-				x: 7,
-				y: 7
+				x: constants.BOARD_CENTER,
+				y: constants.BOARD_CENTER
 			}
 		}
 
@@ -359,7 +361,7 @@ AI.prototype = {
 		// 切换回合
 		gameState.nextTurn();
 
-		util.AIDelayShot(500, function () {
+		util.AIDelayShot(constants.AI_DELAY, function () {
 			Hamster.add(piece);
 			// AI落子后判断是否游戏结束
 			gameState.result = gameLogic.getResult(gameList, position.x, position.y);
@@ -377,7 +379,7 @@ AI.prototype = {
 				}
 				setTimeout(function() {
 					UI.showWinner(1);
-				}, 1000);
+				}, constants.WINNER_DELAY);
 			}
 			gameState.setUserTurn(true);
 			self.isThinking = false;

@@ -7,8 +7,9 @@
 
 var double = require("./DoubliePlayerMode.js");  //双人模式
 var single = require("./SingleMode.js");
+var constants = require("./constants");
 
-Hamster.init("main", 600, 600);
+Hamster.init("main", constants.CANVAS_WIDTH, constants.CANVAS_HEIGHT);
 
 var notice = Hamster.UI.Text({
     "name": "notice",

@@ -4,6 +4,8 @@
  * - v2：22 维局部棋盘特征（独立决策）
  */
 
+var constants = require("./constants");
+
 var FEATURE_DIM_V1 = 6;
 var NN_ASSIST_HIDDEN_V1 = [4];
 var FEATURE_DIM_V2 = 22;
@@ -20,7 +22,7 @@ if (typeof NN_ASSIST_SCHEMA_VERSION === "number" && NN_ASSIST_SCHEMA_VERSION ===
 var SCORE_SCALE = 1e6;
 var MAX_CAND = 50;
 var BOARD_CELLS = 225;
-var BOARD_SIZE = 15;
+var BOARD_SIZE = constants.BOARD_SIZE;
 
 function clamp(v, lo, hi) {
 	if (v < lo) return lo;

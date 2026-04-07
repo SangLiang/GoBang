@@ -1,8 +1,9 @@
 // 一些常用的转换函数
 
-var OFFSET_X = 55; // 棋盘的边框偏移量
-var OFFSET_Y = 55;
-var OFFSET_PIECE = 35; // 棋子的偏移量
+var constants = require("./constants");
+var OFFSET_X = constants.OFFSET_X;
+var OFFSET_Y = constants.OFFSET_Y;
+var OFFSET_PIECE = constants.OFFSET_PIECE;
 
 module.exports = {
     /*

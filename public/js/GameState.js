@@ -9,7 +9,8 @@
  *   gameState.gameTurn    // 当前回合 (0=黑, 1=白)
  */
 
-var BOARD_SIZE = 15;
+var constants = require("./constants");
+var BOARD_SIZE = constants.BOARD_SIZE;
 
 function GameState() {
 	// 15x15 棋盘，0=空，1=黑，2=白

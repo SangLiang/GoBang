@@ -5,6 +5,7 @@ var UI = require("./UI.js");
 var util = require("./util.js");
 var gameLogic = require('./gameLogic.js');
 var GameState = require("./GameState");
+var constants = require("./constants");
 
 var gameState = null;
 
@@ -32,7 +33,7 @@ module.exports.start = function () {
 		}
 
 		var position = util.getBoardPosition(e.x, e.y);
-		if (!position || position.x < 0 || position.x >= 15 || position.y < 0 || position.y >= 15) {
+		if (!position || position.x < 0 || position.x >= constants.BOARD_SIZE || position.y < 0 || position.y >= constants.BOARD_SIZE) {
 			return;
 		}
 
@@ -50,9 +51,9 @@ module.exports.start = function () {
 		
 		// 如果游戏结束，显示获胜方
 		if (gameState.result) {
-			setTimeout(function() {
-				UI.showWinner(gameState.gameTurn, restartGame, backToMenu);
-			}, 1000);
+		setTimeout(function() {
+			UI.showWinner(gameState.gameTurn, restartGame, backToMenu);
+		}, constants.WINNER_DELAY);
 			return;
 		}
 		

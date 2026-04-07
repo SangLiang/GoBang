@@ -2,13 +2,20 @@
  * 游戏核心逻辑
  */
 
+var constants = require("./constants");
+var BOARD_SIZE = constants.BOARD_SIZE;
+var WIN_LENGTH = constants.WIN_LENGTH;
+var SCORES = constants.SCORES;
+var BOARD_SIZE_MINUS_WIN_LENGTH = BOARD_SIZE - WIN_LENGTH; // 10
+var WIN_LENGTH_MINUS_ONE = WIN_LENGTH - 1; // 4
+
 /* ---------- 棋形评分：假设在 (mx,my) 为 player 落子，沿一线分析 ---------- */
 
 function virtualCell(gameList, cx, cy, mx, my, player) {
 	if (cx === mx && cy === my) {
 		return player;
 	}
-	if (cx < 0 || cy < 0 || cx > 14 || cy > 14) {
+	if (cx < 0 || cy < 0 || cx >= BOARD_SIZE || cy >= BOARD_SIZE) {
 		return -1;
 	}
 	return gameList[cx][cy];
@@ -19,7 +26,7 @@ function scanConnectedLine(gameList, mx, my, dx, dy, player) {
 	var left = 0;
 	var cx = mx - dx;
 	var cy = my - dy;
-	while (cx >= 0 && cy >= 0 && cx <= 14 && cy <= 14) {
+	while (cx >= 0 && cy >= 0 && cx < BOARD_SIZE && cy < BOARD_SIZE) {
 		if (virtualCell(gameList, cx, cy, mx, my, player) !== player) {
 			break;
 		}
@@ -33,7 +40,7 @@ function scanConnectedLine(gameList, mx, my, dx, dy, player) {
 	var right = 0;
 	cx = mx + dx;
 	cy = my + dy;
-	while (cx >= 0 && cy >= 0 && cx <= 14 && cy <= 14) {
+	while (cx >= 0 && cy >= 0 && cx < BOARD_SIZE && cy < BOARD_SIZE) {
 		if (virtualCell(gameList, cx, cy, mx, my, player) !== player) {
 			break;
 		}
@@ -45,8 +52,8 @@ function scanConnectedLine(gameList, mx, my, dx, dy, player) {
 	var ry = cy;
 
 	var total = 1 + left + right;
-	var leftOpen = (lx >= 0 && ly >= 0 && lx <= 14 && ly <= 14 && gameList[lx][ly] === 0);
-	var rightOpen = (rx >= 0 && ry >= 0 && rx <= 14 && ry <= 14 && gameList[rx][ry] === 0);
+	var leftOpen = (lx >= 0 && ly >= 0 && lx < BOARD_SIZE && ly < BOARD_SIZE && gameList[lx][ly] === 0);
+	var rightOpen = (rx >= 0 && ry >= 0 && rx < BOARD_SIZE && ry < BOARD_SIZE && gameList[rx][ry] === 0);
 
 	return {
 		"total": total,
@@ -58,43 +65,43 @@ function scanConnectedLine(gameList, mx, my, dx, dy, player) {
 // 单线棋形 → 分数与类型（用于组合加成）
 function linePatternScore(total, leftOpen, rightOpen) {
 	// 成五 / 长连
-	if (total >= 5) {
-		return { "score": 1000000, "kind": "FIVE" };
+	if (total >= WIN_LENGTH) {
+		return { "score": SCORES.FIVE, "kind": "FIVE" };
 	}
 	if (total === 4) {
 		if (leftOpen && rightOpen) {
-			return { "score": 120000, "kind": "OPEN4" };
+			return { "score": SCORES.OPEN4, "kind": "OPEN4" };
 		}
 		if (leftOpen || rightOpen) {
-			return { "score": 15000, "kind": "RUSH4" };
+			return { "score": SCORES.RUSH4, "kind": "RUSH4" };
 		}
-		return { "score": 220, "kind": "DEAD4" };
+		return { "score": SCORES.DEAD4, "kind": "DEAD4" };
 	}
 	if (total === 3) {
 		if (leftOpen && rightOpen) {
-			return { "score": 10000, "kind": "OPEN3" };
+			return { "score": SCORES.OPEN3, "kind": "OPEN3" };
 		}
 		if (leftOpen || rightOpen) {
-			return { "score": 800, "kind": "SLEEP3" };
+			return { "score": SCORES.SLEEP3, "kind": "SLEEP3" };
 		}
-		return { "score": 120, "kind": "DEAD3" };
+		return { "score": SCORES.DEAD3, "kind": "DEAD3" };
 	}
 	if (total === 2) {
 		if (leftOpen && rightOpen) {
-			return { "score": 180, "kind": "OPEN2" };
+			return { "score": SCORES.OPEN2, "kind": "OPEN2" };
 		}
 		if (leftOpen || rightOpen) {
-			return { "score": 55, "kind": "SLEEP2" };
+			return { "score": SCORES.SLEEP2, "kind": "SLEEP2" };
 		}
-		return { "score": 15, "kind": "DEAD2" };
+		return { "score": SCORES.DEAD2, "kind": "DEAD2" };
 	}
 	if (leftOpen && rightOpen) {
-		return { "score": 35, "kind": "OPEN1" };
+		return { "score": SCORES.OPEN1, "kind": "OPEN1" };
 	}
 	if (leftOpen || rightOpen) {
-		return { "score": 10, "kind": "SLEEP1" };
+		return { "score": SCORES.SLEEP1, "kind": "SLEEP1" };
 	}
-	return { "score": 3, "kind": "LOW" };
+	return { "score": SCORES.LOW, "kind": "LOW" };
 }
 
 // 四方向（横、竖、两斜）累计 + 双活三 / 双冲四 加成
@@ -124,10 +131,10 @@ function computePatternScoreAt(gameList, mx, my, player) {
 		}
 	}
 	if (open3Count >= 2) {
-		sum += 12000;
+		sum += SCORES.DOUBLE_OPEN3_BONUS;
 	}
 	if (rush4Count >= 2) {
-		sum += 80000;
+		sum += SCORES.DOUBLE_RUSH4_BONUS;
 	}
 	return sum;
 }
@@ -174,25 +181,25 @@ module.exports = {
         for (var x = 0; x < gameList.length; x++) {
             for (var y = 0; y < gameList[x].length; y++) {
                 // 横向检测条件
-                if (x <= 10 && gameList[x][y] != 0) {
+                if (x <= BOARD_SIZE_MINUS_WIN_LENGTH && gameList[x][y] != 0) {
                     if (this.checkHorizontal(gameList, x, y) == true) {
                         return true;
                     }
                 }
                 // 纵向
-                if (y <= 10 && gameList[x][y] != 0) {
+                if (y <= BOARD_SIZE_MINUS_WIN_LENGTH && gameList[x][y] != 0) {
                     if (this.checkVertica(gameList, x, y) == true) {
                         return true;
                     }
                 }
                 // 副对角线
-                if (x <= 10 && y <= 10 && gameList[x][y] != 0) {
+                if (x <= BOARD_SIZE_MINUS_WIN_LENGTH && y <= BOARD_SIZE_MINUS_WIN_LENGTH && gameList[x][y] != 0) {
                     if (this.checkViceDiagonal(gameList, x, y) == true) {
                         return true;
                     }
                 }
                 // 主对角线
-                if (x <= 10 && y >= 4 && gameList[x][y] != 0) {
+                if (x <= BOARD_SIZE_MINUS_WIN_LENGTH && y >= WIN_LENGTH_MINUS_ONE && gameList[x][y] != 0) {
                     if (this.checkMainDiagonal(gameList, x, y) == true) {
                         return true;
                     }
@@ -260,7 +267,7 @@ module.exports = {
                             if (di === 0 && dj === 0) continue;
                             ni = i + di;
                             nj = k + dj;
-                            if (ni >= 0 && ni < 15 && nj >= 0 && nj < 15) {
+                            if (ni >= 0 && ni < BOARD_SIZE && nj >= 0 && nj < BOARD_SIZE) {
                                 if (gameList[ni][nj] !== 0) {
                                     hasNeighbor = true;
                                 }

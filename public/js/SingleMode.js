@@ -6,6 +6,7 @@ var AI = require("./AI");
 var trainingApi = require("./trainingApi");
 var nnAssist = require("./nnAssist");
 var GameState = require("./GameState");
+var constants = require("./constants");
 
 var gameState = null;
 
@@ -63,7 +64,7 @@ module.exports.start = function () {
 		}
 
 		var position = util.getBoardPosition(e.x, e.y);
-		if (!position || position.x < 0 || position.x >= 15 || position.y < 0 || position.y >= 15) {
+		if (!position || position.x < 0 || position.x >= constants.BOARD_SIZE || position.y < 0 || position.y >= constants.BOARD_SIZE) {
 			return;
 		}
 
@@ -100,7 +101,7 @@ module.exports.start = function () {
 			}
 			setTimeout(function() {
 				UI.showWinner(winner, restartGame, backToMenu);
-			}, 1000);
+			}, constants.WINNER_DELAY);
 			return;
 		}
 
