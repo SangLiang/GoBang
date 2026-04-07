@@ -157,11 +157,19 @@ function computeV2(features) {
 
 if (typeof window !== "undefined") {
 	window.__nnAssistSmoke = function () {
-		var gl = window.gameList;
+		var gl = null;
+		var n = 1;
+		if (window.gameState && window.gameState.gameList) {
+			gl = window.gameState.gameList;
+			var needComputePlace = require("./gameLogic").checkDanger(gl);
+			n = needComputePlace.length || 1;
+		} else if (window.gameList) {
+			gl = window.gameList;
+			n = window.needComputePlace && window.needComputePlace.length ? window.needComputePlace.length : 1;
+		}
 		if (!gl) {
 			return null;
 		}
-		var n = window.needComputePlace && window.needComputePlace.length ? window.needComputePlace.length : 1;
 		var stones = 0;
 		for (var i = 0; i < gl.length; i++) {
 			for (var j = 0; j < gl[i].length; j++) {
@@ -177,7 +185,12 @@ if (typeof window !== "undefined") {
 		return computeAssist(f);
 	};
 	window.__nnAssistSmokeV2 = function () {
-		var gl = window.gameList;
+		var gl = null;
+		if (window.gameState && window.gameState.gameList) {
+			gl = window.gameState.gameList;
+		} else if (window.gameList) {
+			gl = window.gameList;
+		}
 		if (!gl) {
 			return null;
 		}

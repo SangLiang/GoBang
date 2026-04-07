@@ -2,14 +2,6 @@
  * 游戏核心逻辑
  */
 
-// 需要计算权重的数组
-window.needComputePlace = [];
-
-// 直接可以杀死比赛的点（保留全局，当前由棋形评分覆盖，不再在此处写入）
-window.killPosition = [];
-
-window.weightNumber = 0;
-
 /* ---------- 棋形评分：假设在 (mx,my) 为 player 落子，沿一线分析 ---------- */
 
 function virtualCell(gameList, cx, cy, mx, my, player) {
@@ -254,104 +246,39 @@ module.exports = {
     },
 
     // 检测威胁点
-    "checkDanger": function () {
-        window.needComputePlace = [];
-        for (var i = 0; i < gameList.length; i++) {
-            for (var k = 0; k < gameList[i].length; k++) {
-                if (gameList[i][k] == 0) {
-                    // 
-                    if (i < 14 && gameList[i + 1][k]) {
-                        if (gameList[i + 1][k] != 0) {
-                            (function (a, b) {
-                                var _t = {};
-                                _t.x = a;
-                                _t.y = b;
-                                window.needComputePlace.push(_t);
-                            })(i, k)
+    "checkDanger": function(gameList) {
+        var needComputePlace = [];
+        var visited = {};
+        var i, k, di, dj, ni, nj, key;
+
+        for (i = 0; i < gameList.length; i++) {
+            for (k = 0; k < gameList[i].length; k++) {
+                if (gameList[i][k] === 0) {
+                    var hasNeighbor = false;
+                    for (di = -1; di <= 1 && !hasNeighbor; di++) {
+                        for (dj = -1; dj <= 1 && !hasNeighbor; dj++) {
+                            if (di === 0 && dj === 0) continue;
+                            ni = i + di;
+                            nj = k + dj;
+                            if (ni >= 0 && ni < 15 && nj >= 0 && nj < 15) {
+                                if (gameList[ni][nj] !== 0) {
+                                    hasNeighbor = true;
+                                }
+                            }
                         }
                     }
 
-                    if (i > 0 && gameList[i - 1][k]) {
-                        if (gameList[i - 1][k] != 0) {
-                            (function (a, b) {
-                                var _t = {};
-                                _t.x = a;
-                                _t.y = b;
-                                window.needComputePlace.push(_t);
-                            })(i, k)
-                        }
-                    }
-
-                    if (k < 14 && gameList[i][k + 1]) {
-                        if (gameList[i][k + 1] != 0) {
-                            (function (a, b) {
-                                var _t = {};
-                                _t.x = a;
-                                _t.y = b;
-                                window.needComputePlace.push(_t);
-                            })(i, k)
-                        }
-                    }
-
-                    if (k > 0 && gameList[i][k - 1]) {
-                        if (gameList[i][k - 1] != 0) {
-                            (function (a, b) {
-                                var _t = {};
-                                _t.x = a;
-                                _t.y = b;
-                                window.needComputePlace.push(_t);
-                            })(i, k)
-                        }
-                    }
-
-                    //左上威胁
-                    if (k > 0 && i > 0) {
-                        if (gameList[i - 1][k - 1] != 0) {
-                            (function (a, b) {
-                                var _t = {};
-                                _t.x = a;
-                                _t.y = b;
-                                window.needComputePlace.push(_t);
-                            })(i, k)
-                        }
-                    }
-
-                    //左下威胁
-                    if (k < 14 && i > 0) {
-                        if (gameList[i - 1][k + 1] != 0) {
-                            (function (a, b) {
-                                var _t = {};
-                                _t.x = a;
-                                _t.y = b;
-                                window.needComputePlace.push(_t);
-                            })(i, k)
-                        }
-                    }
-                    // 右上威胁
-                    if (i < 14 && k > 0) {
-                        if (gameList[i + 1][k - 1] != 0) {
-                            (function (a, b) {
-                                var _t = {};
-                                _t.x = a;
-                                _t.y = b;
-                                window.needComputePlace.push(_t);
-                            })(i, k)
-                        }
-                    }
-
-                    // 右下威胁
-                    if (i < 14 && k < 14) {
-                        if (gameList[i + 1][k + 1] != 0) {
-                            (function (a, b) {
-                                var _t = {};
-                                _t.x = a;
-                                _t.y = b;
-                                window.needComputePlace.push(_t);
-                            })(i, k)
+                    if (hasNeighbor) {
+                        key = i + "," + k;
+                        if (!visited[key]) {
+                            visited[key] = true;
+                            needComputePlace.push({"x": i, "y": k});
                         }
                     }
                 }
             }
         }
+
+        return needComputePlace;
     }
 }

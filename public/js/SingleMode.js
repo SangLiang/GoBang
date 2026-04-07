@@ -5,127 +5,118 @@ var gameLogic = require('./gameLogic.js');
 var AI = require("./AI");
 var trainingApi = require("./trainingApi");
 var nnAssist = require("./nnAssist");
+var GameState = require("./GameState");
 
-window.gameList = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-];
-
-window.gameTurn = null; // 0代表黑子，1代表白子
-window.isUserTurn = false;
-window.userLastPieceLocation = null;
-window.result = false;
+var gameState = null;
 
 module.exports.start = function () {
-    // 每次进入单人模式都重置训练日志相关状态
-    window.hasLoggedSingleResult = false;
-    window.moveCountSingle = 0;
+	// 清理旧状态
+	if (gameState) {
+		gameState.cleanup();
+	}
 
-    var nnLoadOn =
-        typeof NN_ASSIST_ENABLED !== "undefined" && NN_ASSIST_ENABLED &&
-        typeof NN_LAMBDA === "number" && NN_LAMBDA !== 0;
-    if (nnLoadOn) {
-        nnAssist.preloadWeightsFromTrainingApi();
-    }
+	gameState = new GameState();
+	// 暴露到 window 供调试工具使用
+	window.gameState = gameState;
 
-    Hamster.add(UI.background);
-    Hamster.add(UI.turnUI);
+	// 每次进入单人模式都重置训练日志相关状态
+	gameState.hasLoggedResult = false;
+	gameState.moveCount = 0;
 
-    var ai = new AI();
+	var nnLoadOn =
+		typeof NN_ASSIST_ENABLED !== "undefined" && NN_ASSIST_ENABLED &&
+		typeof NN_LAMBDA === "number" && NN_LAMBDA !== 0;
+	if (nnLoadOn) {
+		nnAssist.preloadWeightsFromTrainingApi();
+	}
 
-    // 设置电脑的先后手
-    var random = util.getRandomNumber(0, 1);
+	Hamster.removeAll();
+	Hamster.add(UI.background);
+	Hamster.add(UI.turnUI);
 
-    random = 1;
-    UI.changedSideText(gameTurn);
-    if (random == 0) {
-        window.gameTurn = 0;
-        //电脑先放子
-        ai.shotPiece(gameTurn, gameList);
-        isUserTurn = false;
-    } else {
-        // 玩家先放子
-        window.gameTurn = 0;
-        window.isUserTurn = true;
-    }
+	var ai = new AI();
+	gameState.ai = ai;
 
-    UI.background.isTrigger = true;
-    Hamster.addEventListener(UI.background, "click", function (e) {
+	// 设置电脑的先后手
+	var random = util.getRandomNumber(0, 1);
 
-        // 判断游戏的结果
-        if (!window.isUserTurn) {
-            return;
-        }
+	UI.changedSideText(gameState.gameTurn);
+	if (random === 0) {
+		// 电脑先放子
+		ai.shotPiece(gameState);
+		gameState.setUserTurn(false);
+	} else {
+		// 玩家先放子
+		gameState.setUserTurn(true);
+	}
 
-        if (window.result) {
-            console.log("game over");
-            return;
-        }
-        var position = util.getBoardPosition(e.x, e.y);
-        var _pos = util.setPositionByBoardPosition(position.x, position.y);
-        window.userLastPieceLocation = position;
+	UI.background.isTrigger = true;
+	var clickHandler = function (e) {
+		// 判断游戏的结果
+		if (!gameState.isUserTurn) {
+			return;
+		}
 
-        var rightPlace = gameLogic.setPieceInGameList(gameTurn, gameList, position);
-        if (!rightPlace) {
-            return;
-        }
+		if (gameState.result) {
+			console.log("game over");
+			return;
+		}
 
-        window.moveCountSingle++;
+		var position = util.getBoardPosition(e.x, e.y);
+		if (!position || position.x < 0 || position.x >= 15 || position.y < 0 || position.y >= 15) {
+			return;
+		}
 
-        //生成棋子 
-        var piece = gameLogic.shotPiece(gameTurn, _pos);
-        Hamster.add(piece);
+		var _pos = util.setPositionByBoardPosition(position.x, position.y);
 
-        // 检测游戏结果
-        window.result = gameLogic.getResult(gameList, position.x, position.y);
-        
-        // 如果游戏结束，显示获胜方
-        if (window.result) {
-            // 这里还未切换回合，gameTurn 就是刚刚落子并获胜的一方。
-            var winner = gameTurn;
-            var nnSchemaVersion = typeof NN_ASSIST_SCHEMA_VERSION === "number" ? NN_ASSIST_SCHEMA_VERSION : 1;
-            if (!window.hasLoggedSingleResult) {
-                window.hasLoggedSingleResult = true;
-                trainingApi.appendTrainingLog({
-                    "mode": "single",
-                    "result": "win-user",
-                    "winnerSide": gameTurn == 0 ? "black" : "white",
-                    "moves": trainingApi.countStones(gameList),
-                    "schemaVersion": nnSchemaVersion,
-                    "ts": new Date().toISOString()
-                });
-            }
-            setTimeout(function() {
-                UI.showWinner(winner);
-            }, 1000);
-            return;
-        }
+		var rightPlace = gameLogic.setPieceInGameList(gameState.gameTurn, gameState.gameList, position);
+		if (!rightPlace) {
+			return;
+		}
 
-        //  转换回合
-        if (window.gameTurn == 0) {
-            window.gameTurn = 1;
-        } else if (window.gameTurn == 1) {
-            window.gameTurn = 0;
-        }
+		gameState.incrementMoveCount();
 
-        UI.changedSideText(gameTurn);
+		// 生成棋子 
+		var piece = gameLogic.shotPiece(gameState.gameTurn, _pos);
+		Hamster.add(piece);
 
-        window.isUserTurn = false;
+		// 检测游戏结果
+		gameState.result = gameLogic.getResult(gameState.gameList, position.x, position.y);
+		
+		// 如果游戏结束，显示获胜方
+		if (gameState.result) {
+			var winner = gameState.gameTurn;
+			var nnSchemaVersion = typeof NN_ASSIST_SCHEMA_VERSION === "number" ? NN_ASSIST_SCHEMA_VERSION : 1;
+			if (!gameState.hasLoggedResult) {
+				gameState.hasLoggedResult = true;
+				trainingApi.appendTrainingLog({
+					"mode": "single",
+					"result": "win-user",
+					"winnerSide": gameState.gameTurn === 0 ? "black" : "white",
+					"moves": trainingApi.countStones(gameState.gameList),
+					"schemaVersion": nnSchemaVersion,
+					"ts": new Date().toISOString()
+				});
+			}
+			setTimeout(function() {
+				UI.showWinner(winner);
+			}, 1000);
+			return;
+		}
 
-        ai.shotPiece(gameTurn, gameList);
-    });
+		// 转换回合
+		gameState.nextTurn();
 
-}
+		UI.changedSideText(gameState.gameTurn);
+
+		gameState.setUserTurn(false);
+
+		ai.shotPiece(gameState);
+	};
+
+	Hamster.addEventListener(UI.background, "click", clickHandler);
+
+	gameState.registerCleanup(function() {
+		Hamster.removeAll();
+	});
+};
