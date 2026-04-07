@@ -51,7 +51,7 @@ module.exports.start = function () {
 		// 如果游戏结束，显示获胜方
 		if (gameState.result) {
 			setTimeout(function() {
-				UI.showWinner(gameState.gameTurn);
+				UI.showWinner(gameState.gameTurn, restartGame, backToMenu);
 			}, 1000);
 			return;
 		}
@@ -66,4 +66,23 @@ module.exports.start = function () {
 	gameState.registerCleanup(function() {
 		Hamster.removeAll();
 	});
+
+	function restartGame() {
+		UI.hideWinner();
+		module.exports.start();
+	}
+
+	function backToMenu() {
+		UI.hideWinner();
+		Hamster.removeAll();
+		var notice = Hamster.UI.Text({
+			"name": "notice",
+			"fontSize": 20,
+			"text": "请输入游戏模式，s为单人模式，d为双人对战模式",
+			"x": 10,
+			"y": 30,
+			"color": "#fff"
+		});
+		Hamster.add(notice);
+	}
 };
