@@ -65,7 +65,7 @@ function recordGame(blackPick, whitePick) {
             board: JSON.parse(JSON.stringify(board))
         });
         
-        if (boardCore.checkWin(board)) {
+        if (boardCore.checkWin(board, pos.x, pos.y)) {
             return {
                 winner: gameTurn === 0 ? "黑" : "白",
                 moves: moves,

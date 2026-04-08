@@ -25,7 +25,7 @@ function playOneGame(blackPick, whitePick) {
 			throw new Error("playOneGame: illegal move " + pos.x + "," + pos.y + " turn=" + gameTurn);
 		}
 		moves++;
-		if (boardCore.checkWin(board)) {
+		if (boardCore.checkWin(board, pos.x, pos.y)) {
 			return {
 				winner: gameTurn === 0 ? "black" : "white",
 				moves: moves,

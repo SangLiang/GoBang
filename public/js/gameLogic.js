@@ -177,36 +177,41 @@ module.exports = {
 
     // 获取游戏结果
     "getResult": function (gameList, x, y) {
-
-        for (var x = 0; x < gameList.length; x++) {
-            for (var y = 0; y < gameList[x].length; y++) {
-                // 横向检测条件
-                if (x <= BOARD_SIZE_MINUS_WIN_LENGTH && gameList[x][y] != 0) {
-                    if (this.checkHorizontal(gameList, x, y) == true) {
-                        return true;
-                    }
-                }
-                // 纵向
-                if (y <= BOARD_SIZE_MINUS_WIN_LENGTH && gameList[x][y] != 0) {
-                    if (this.checkVertica(gameList, x, y) == true) {
-                        return true;
-                    }
-                }
-                // 副对角线
-                if (x <= BOARD_SIZE_MINUS_WIN_LENGTH && y <= BOARD_SIZE_MINUS_WIN_LENGTH && gameList[x][y] != 0) {
-                    if (this.checkViceDiagonal(gameList, x, y) == true) {
-                        return true;
-                    }
-                }
-                // 主对角线
-                if (x <= BOARD_SIZE_MINUS_WIN_LENGTH && y >= WIN_LENGTH_MINUS_ONE && gameList[x][y] != 0) {
-                    if (this.checkMainDiagonal(gameList, x, y) == true) {
-                        return true;
-                    }
-                }
+        if (gameList[x][y] === 0) return false;
+        
+        var player = gameList[x][y];
+        var directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+        
+        for (var i = 0; i < directions.length; i++) {
+            var dx = directions[i][0];
+            var dy = directions[i][1];
+            if (this.checkDirection(gameList, x, y, dx, dy, player)) {
+                return true;
             }
         }
         return false;
+    },
+
+    "checkDirection": function (gameList, x, y, dx, dy, player) {
+        var count = 1;
+        
+        // 正方向
+        var cx = x + dx, cy = y + dy;
+        while (cx >= 0 && cy >= 0 && cx < BOARD_SIZE && cy < BOARD_SIZE && gameList[cx][cy] === player) {
+            count++;
+            cx += dx;
+            cy += dy;
+        }
+        
+        // 反方向
+        cx = x - dx; cy = y - dy;
+        while (cx >= 0 && cy >= 0 && cx < BOARD_SIZE && cy < BOARD_SIZE && gameList[cx][cy] === player) {
+            count++;
+            cx -= dx;
+            cy -= dy;
+        }
+        
+        return count >= WIN_LENGTH;
     },
 
     // 横排检测

@@ -79,7 +79,7 @@ function recordGame(blackName, whiteName, blackPick, whitePick) {
             board: JSON.parse(JSON.stringify(board))
         });
         
-        if (boardCore.checkWin(board)) {
+        if (boardCore.checkWin(board, pos.x, pos.y)) {
             return {
                 winner: player,
                 winnerName: playerName,

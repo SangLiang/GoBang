@@ -35,16 +35,25 @@ function randomOpeningBoard() {
 	var t;
 	for (t = 0; t < depth; t++) {
 		// 候选落子点数组：[{x:number, y:number}, ...]
-		// “与已有子相邻的空位”（8 邻域），已去重并按坐标排序。
+		// "与已有子相邻的空位"（8 邻域），已去重并按坐标排序。
 		var cands = boardCore.getLegalCandidates(b);
+		var lastX, lastY;
 		if (cands.length === 0) {
 			// 空盘等早期情况可能没有候选，按项目约定先落中心点。
-			boardCore.applyMove(b, 7, 7, turn);
+			lastX = 7; lastY = 7;
+			boardCore.applyMove(b, lastX, lastY, turn);
 		} else {
 			// 从候选点里均匀随机挑一个，构造随机浅开局样本。
 			var j = randomInt(cands.length);
-			boardCore.applyMove(b, cands[j].x, cands[j].y, turn);
+			lastX = cands[j].x; lastY = cands[j].y;
+			boardCore.applyMove(b, lastX, lastY, turn);
 		}
+		// 若随机过程已出现终局，丢弃该样本并重抽
+		if (boardCore.checkWin(b, lastX, lastY)) {
+			return null;
+		}
+		turn = turn === 0 ? 1 : 0;
+	}
 		// 若随机过程已出现终局，丢弃该样本并重抽
 		if (boardCore.checkWin(b)) {
 			return null;

@@ -8,6 +8,9 @@
 "use strict";
 
 var BOARD_SIZE = 15;
+var WIN_LENGTH = 5;
+var BOARD_SIZE_MINUS_WIN_LENGTH = BOARD_SIZE - WIN_LENGTH; // 10
+var WIN_LENGTH_MINUS_ONE = WIN_LENGTH - 1; // 4
 
 function createEmptyBoard() {
 	var b = [];
@@ -246,29 +249,88 @@ function checkMainDiagonal(gameList, x, y) {
 }
 
 /**
- * 与浏览器 gameLogic.getResult 等价的全盘扫描（任一方五连即 true）。
+ * 从指定位置向方向(dx,dy)检查是否五连（双向扫描）。
+ * @param {number[][]} gameList
+ * @param {number} x 起始x坐标
+ * @param {number} y 起始y坐标
+ * @param {number} dx x方向增量
+ * @param {number} dy y方向增量
+ * @param {number} player 玩家值(1或2)
+ * @returns {boolean} 是否五连
  */
-function checkWin(gameList) {
+function checkDirection(gameList, x, y, dx, dy, player) {
+	var count = 1;
+	var cx = x + dx;
+	var cy = y + dy;
+	var BOARD_SIZE = gameList.length;
+
+	// 正方向扫描
+	while (cx >= 0 && cy >= 0 && cx < BOARD_SIZE && cy < BOARD_SIZE && gameList[cx][cy] === player) {
+		count++;
+		cx += dx;
+		cy += dy;
+	}
+
+	// 反方向扫描
+	cx = x - dx;
+	cy = y - dy;
+	while (cx >= 0 && cy >= 0 && cx < BOARD_SIZE && cy < BOARD_SIZE && gameList[cx][cy] === player) {
+		count++;
+		cx -= dx;
+		cy -= dy;
+	}
+
+	return count >= WIN_LENGTH;
+}
+
+/**
+ * 检查是否出现五连（胜利）。
+ * 若提供 lastX/lastY，只检查最后落子点的四个方向（O(1)复杂度）。
+ * 若不提供，使用全盘扫描（向后兼容）。
+ * @param {number[][]} gameList
+ * @param {number} [lastX] 最后落子x坐标（可选）
+ * @param {number} [lastY] 最后落子y坐标（可选）
+ * @returns {boolean} 任一方五连即 true
+ */
+function checkWin(gameList, lastX, lastY) {
+	// 高效模式：提供最后落子坐标，只检查四个方向
+	if (typeof lastX === "number" && typeof lastY === "number") {
+		if (gameList[lastX][lastY] === 0) return false;
+
+		var player = gameList[lastX][lastY];
+		var directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+
+		for (var i = 0; i < directions.length; i++) {
+			var dx = directions[i][0];
+			var dy = directions[i][1];
+			if (checkDirection(gameList, lastX, lastY, dx, dy, player)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// 兼容模式：全盘扫描（未提供坐标时使用）
 	var x;
 	var y;
 	for (x = 0; x < gameList.length; x++) {
 		for (y = 0; y < gameList[x].length; y++) {
-			if (x <= 10 && gameList[x][y] !== 0) {
+			if (x <= BOARD_SIZE_MINUS_WIN_LENGTH && gameList[x][y] !== 0) {
 				if (checkHorizontal(gameList, x, y)) {
 					return true;
 				}
 			}
-			if (y <= 10 && gameList[x][y] !== 0) {
+			if (y <= BOARD_SIZE_MINUS_WIN_LENGTH && gameList[x][y] !== 0) {
 				if (checkVertica(gameList, x, y)) {
 					return true;
 				}
 			}
-			if (x <= 10 && y <= 10 && gameList[x][y] !== 0) {
+			if (x <= BOARD_SIZE_MINUS_WIN_LENGTH && y <= BOARD_SIZE_MINUS_WIN_LENGTH && gameList[x][y] !== 0) {
 				if (checkViceDiagonal(gameList, x, y)) {
 					return true;
 				}
 			}
-			if (x <= 10 && y >= 4 && gameList[x][y] !== 0) {
+			if (x <= BOARD_SIZE_MINUS_WIN_LENGTH && y >= WIN_LENGTH_MINUS_ONE && gameList[x][y] !== 0) {
 				if (checkMainDiagonal(gameList, x, y)) {
 					return true;
 				}
